@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>PaaOS App Store Manager</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        input, textarea, button { display: block; width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background: #0078d4; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { opacity: 0.8; }
+        .status { padding: 10px; background: #e8f0fe; border-radius: 8px; }
+        .error { background: #fce8e8; color: #c00; }
+    </style>
+</head>
+<body>
+    <h1>📦 PaaOS アプリストア管理</h1>
+    <div class="card">
+        <h2>設定</h2>
+        <label>GitHub トークン</label>
+        <input type="password" id="token" placeholder="ghp_xxxx">
+        <label>リポジトリ（owner/repo）</label>
+        <input type="text" id="repo" value="PaaOS-Apps/store">
+        <label>ブランチ</label>
+        <input type="text" id="branch" value="main">
+    </div>
+
+    <div class="card">
+        <h2>アプリ情報</h2>
+        <label>アプリID（英数字・ハイフン）</label>
+        <input type="text" id="appId" placeholder="myapp">
+        <label>アプリ名</label>
+        <input type="text" id="appName" placeholder="My App">
+        <label>説明</label>
+        <input type="text" id="appDesc" placeholder="説明文">
+        <label>バージョン</label>
+        <input type="text" id="appVersion" value="1.0.0">
+        <label>アイコンファイル（PNG）</label>
+        <input type="file" id="iconFile" accept="image/png">
+        <label>index.html ファイル</label>
+        <input type="file" id="indexFile" accept="text/html">
+        <button id="uploadBtn">アップロード（新規追加／更新）</button>
+        <div id="status" class="status">準備完了</div>
+    </div>
+
+    <div class="card">
+        <h2>既存アプリ一覧（読み込み）</h2>
+        <button id="listBtn">一覧を取得</button>
+        <pre id="appList" style="background:#eee; padding:10px; border-radius:8px; max-height:300px; overflow:auto;"></pre>
+    </div>
+
+    <script>
+        // 簡易実装: GitHub API を使ってファイルをアップロード
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            const token = document.getElementById('token').value;
+            const repo = document.getElementById('repo').value;
+            const branch = document.getElementById('branch').value;
+            const appId = document.getElementById('appId').value.trim();
+            const appName = document.getElementById('appName').value.trim();
+            const appDesc = document.getElementById('appDesc').value.trim();
+            const appVersion = document.getElementById('appVersion').value.trim();
+            const iconFile = document.getElementById('iconFile').files[0];
+            const indexFile = document.getElementById('indexFile').files[0];
+            const status = document.getElementById('status');
+
+            if (!token || !repo || !appId || !appName || !iconFile || !indexFile) {
+                status.innerText = '⚠️ 必須項目をすべて入力してください。';
+                status.className = 'status error';
+                return;
+            }
+
+            status.innerText = '⏳ 処理中...';
+            status.className = 'status';
+
+            try {
+                const owner = repo.split('/')[0];
+                const repoName = repo.split('/')[1];
+
+                // 1. 現在の apps.json を取得
+                const apiBase = `https://api.github.com/repos/${owner}/${repoName}/contents`;
+                let currentAppsJson = { apps: [] };
+                let sha = null;
+                try {
+                    const res = await fetch(`${apiBase}/apps.json?ref=${branch}`, {
+                        headers: { 'Authorization': `token ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        const content = atob(data.content);
+                        currentAppsJson = JSON.parse(content);
+                        sha = data.sha;
+                    } else if (res.status !== 404) {
+                        throw new Error('apps.json 取得エラー');
+                    }
+                } catch(e) {}
+
+                // 2. アプリ情報を更新/追加
+                const appIndex = currentAppsJson.apps.findIndex(a => a.id === appId);
+                const appEntry = {
+                    id: appId,
+                    name: appName,
+                    description: appDesc || '',
+                    version: appVersion,
+                    icon: `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/apps/${appId}/icon.png`,
+                    basePath: `apps/${appId}/`,
+                    files: ['index.html', 'icon.png']
+                };
+                if (appIndex >= 0) {
+                    currentAppsJson.apps[appIndex] = appEntry;
+                } else {
+                    currentAppsJson.apps.push(appEntry);
+                }
+
+                // 3. 各ファイルを Base64 エンコードしてアップロード
+                const readFileAsBase64 = (file) => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                };
+
+                const iconBase64 = await readFileAsBase64(iconFile);
+                const indexBase64 = await readFileAsBase64(indexFile);
+
+                // アップロード先パス
+                const iconPath = `apps/${appId}/icon.png`;
+                const indexPath = `apps/${appId}/index.html`;
+
+                // ファイルアップロード（既存があれば上書き）
+                const uploadFile = async (path, content, message) => {
+                    let fileSha = null;
+                    try {
+                        const res = await fetch(`${apiBase}/${path}?ref=${branch}`, {
+                            headers: { 'Authorization': `token ${token}` }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            fileSha = data.sha;
+                        }
+                    } catch(e) {}
+                    const body = {
+                        message: message,
+                        content: content,
+                        branch: branch,
+                        sha: fileSha || undefined
+                    };
+                    const res = await fetch(`${apiBase}/${path}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+                    if (!res.ok) throw new Error(`ファイル ${path} のアップロードに失敗`);
+                };
+
+                await uploadFile(iconPath, iconBase64, `Add/update icon for ${appId}`);
+                await uploadFile(indexPath, indexBase64, `Add/update index.html for ${appId}`);
+
+                // 4. apps.json を更新
+                const updatedJson = JSON.stringify(currentAppsJson, null, 2);
+                const jsonBase64 = btoa(unescape(encodeURIComponent(updatedJson))); // UTF-8対応
+                await uploadFile('apps.json', jsonBase64, `Update apps.json for ${appId}`);
+
+                status.innerText = `✅ アプリ "${appName}" をアップロードしました！`;
+                status.className = 'status';
+            } catch (err) {
+                status.innerText = `❌ エラー: ${err.message}`;
+                status.className = 'status error';
+                console.error(err);
+            }
+        });
+
+        // 一覧表示
+        document.getElementById('listBtn').addEventListener('click', async () => {
+            const token = document.getElementById('token').value;
+            const repo = document.getElementById('repo').value;
+            const branch = document.getElementById('branch').value;
+            const pre = document.getElementById('appList');
+            if (!token || !repo) {
+                pre.innerText = 'トークンとリポジトリを設定してください。';
+                return;
+            }
+            try {
+                const owner = repo.split('/')[0];
+                const repoName = repo.split('/')[1];
+                const res = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/apps.json?ref=${branch}`, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+                if (!res.ok) throw new Error('取得失敗');
+                const data = await res.json();
+                const content = atob(data.content);
+                const json = JSON.parse(content);
+                pre.innerText = JSON.stringify(json, null, 2);
+            } catch(e) {
+                pre.innerText = 'エラー: ' + e.message;
+            }
+        });
+    </script>
+</body>
+</html>
