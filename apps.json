@@ -4,7 +4,7 @@
       "id": "Game",
       "name": "Game",
       "description": "a",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/Game/icon.png",
       "basePath": "apps/Game/",
       "files": [
