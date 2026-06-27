@@ -6,87 +6,203 @@
     <style>
         body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        input, textarea, button { display: block; width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+        input, textarea, button, select { display: block; width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
         button { background: #0078d4; color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { opacity: 0.8; }
         .status { padding: 10px; background: #e8f0fe; border-radius: 8px; }
         .error { background: #fce8e8; color: #c00; }
+        .flex-row { display: flex; gap: 10px; align-items: center; }
+        .flex-row > * { flex: 1; }
+        .file-note { font-size: 12px; color: #888; margin-top: -4px; margin-bottom: 8px; }
     </style>
 </head>
 <body>
     <h1>📦 PaaOS アプリストア管理</h1>
     <div class="card">
-    <h2>設定</h2>
-    <form id="settings-form">
-        <label>GitHub トークン</label>
-        <input type="password" id="token" name="token" 
-               placeholder="ghp_xxxx" 
-               autocomplete="current-password">
+        <h2>設定</h2>
+        <form id="settings-form">
+            <label>GitHub トークン</label>
+            <input type="password" id="token" name="token" 
+                   placeholder="ghp_xxxx" 
+                   autocomplete="current-password">
 
-        <label>リポジトリ（owner/repo）</label>
-        <input type="text" id="repo" name="repo" 
-               value="PaaPaaSeizin/paaosstore" 
-               autocomplete="organization" readonly>
+            <label>リポジトリ（owner/repo）</label>
+            <input type="text" id="repo" name="repo" 
+                   value="PaaPaaSeizin/paaosstore" readonly>
 
-        <label>ブランチ</label>
-        <input type="text" id="branch" name="branch" 
-               value="main" readonly>
-    </form>
-</div>
+            <label>ブランチ</label>
+            <input type="text" id="branch" name="branch" 
+                   value="main" readonly>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>既存アプリを選択（更新用）</h2>
+        <div class="flex-row">
+            <button id="loadAppsBtn">📋 アプリ一覧を読み込む</button>
+            <select id="appSelect" style="display:none;">
+                <option value="">-- アプリを選択してください --</option>
+            </select>
+        </div>
+        <div id="loadStatus" class="status" style="margin-top:10px;">まだ読み込んでいません</div>
+    </div>
 
     <div class="card">
         <h2>アプリ情報</h2>
         <label>アプリID（英数字・ハイフン）</label>
         <input type="text" id="appId" placeholder="myapp">
+
         <label>アプリ名</label>
         <input type="text" id="appName" placeholder="My App">
+
         <label>説明</label>
         <input type="text" id="appDesc" placeholder="説明文">
+
         <label>バージョン</label>
         <input type="text" id="appVersion" value="1.0.0">
-        <label>アイコンファイル（PNG）</label>
+
+        <label>アイコンファイル（PNG）<span style="font-weight:normal;font-size:12px;color:#888;">（任意：選択しないと既存を維持）</span></label>
         <input type="file" id="iconFile" accept="image/png">
-        <label>index.html ファイル</label>
+        <div class="file-note">更新時にアイコンを変更したい場合のみ選択</div>
+
+        <label>index.html ファイル<span style="font-weight:normal;font-size:12px;color:#888;">（任意：選択しないと既存を維持）</span></label>
         <input type="file" id="indexFile" accept="text/html">
+        <div class="file-note">更新時にHTMLを変更したい場合のみ選択</div>
+
         <button id="uploadBtn">アップロード（新規追加／更新）</button>
         <div id="status" class="status">準備完了</div>
     </div>
 
     <div class="card">
-        <h2>既存アプリ一覧（読み込み）</h2>
-        <button id="listBtn">一覧を取得</button>
+        <h2>現在の apps.json（確認用）</h2>
+        <button id="listBtn">JSONを表示</button>
         <pre id="appList" style="background:#eee; padding:10px; border-radius:8px; max-height:300px; overflow:auto;"></pre>
     </div>
 
     <script>
-        // 簡易実装: GitHub API を使ってファイルをアップロード
-        document.getElementById('uploadBtn').addEventListener('click', async () => {
-            const token = document.getElementById('token').value;
-            const repo = document.getElementById('repo').value;
-            const branch = document.getElementById('branch').value;
-            const appId = document.getElementById('appId').value.trim();
-            const appName = document.getElementById('appName').value.trim();
-            const appDesc = document.getElementById('appDesc').value.trim();
-            const appVersion = document.getElementById('appVersion').value.trim();
-            const iconFile = document.getElementById('iconFile').files[0];
-            const indexFile = document.getElementById('indexFile').files[0];
-            const status = document.getElementById('status');
+        // ----- ユーティリティ -----
+        const tokenInput = document.getElementById('token');
+        const repoInput = document.getElementById('repo');
+        const branchInput = document.getElementById('branch');
 
-            if (!token || !repo || !appId || !appName || !iconFile || !indexFile) {
-                status.innerText = '⚠️ 必須項目をすべて入力してください。';
-                status.className = 'status error';
+        const appIdInput = document.getElementById('appId');
+        const appNameInput = document.getElementById('appName');
+        const appDescInput = document.getElementById('appDesc');
+        const appVersionInput = document.getElementById('appVersion');
+        const iconFileInput = document.getElementById('iconFile');
+        const indexFileInput = document.getElementById('indexFile');
+
+        const statusDiv = document.getElementById('status');
+        const loadStatusDiv = document.getElementById('loadStatus');
+
+        const appSelect = document.getElementById('appSelect');
+        const loadAppsBtn = document.getElementById('loadAppsBtn');
+
+        // ----- アプリ一覧取得＆セレクトボックス生成 -----
+        async function fetchAppList() {
+            const token = tokenInput.value;
+            const repo = repoInput.value;
+            const branch = branchInput.value;
+
+            if (!token || !repo) {
+                loadStatusDiv.innerText = '⚠️ トークンとリポジトリを設定してください。';
+                loadStatusDiv.className = 'status error';
                 return;
             }
-
-            status.innerText = '⏳ 処理中...';
-            status.className = 'status';
 
             try {
                 const owner = repo.split('/')[0];
                 const repoName = repo.split('/')[1];
+                const url = `https://api.github.com/repos/${owner}/${repoName}/contents/apps.json?ref=${branch}`;
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
 
-                // 1. 現在の apps.json を取得
+                if (!res.ok) throw new Error('apps.json の取得に失敗しました (HTTP ' + res.status + ')');
+
+                const data = await res.json();
+                const content = atob(data.content);
+                const json = JSON.parse(content);
+
+                if (!json.apps || json.apps.length === 0) {
+                    loadStatusDiv.innerText = '📭 アプリが一つも登録されていません。';
+                    loadStatusDiv.className = 'status';
+                    appSelect.style.display = 'none';
+                    return;
+                }
+
+                // セレクトボックスを生成
+                appSelect.innerHTML = '<option value="">-- アプリを選択してください --</option>';
+                json.apps.forEach(app => {
+                    const opt = document.createElement('option');
+                    opt.value = app.id;
+                    opt.textContent = `${app.name} (${app.id}) v${app.version}`;
+                    appSelect.appendChild(opt);
+                });
+                appSelect.style.display = 'block';
+                loadStatusDiv.innerText = `✅ ${json.apps.length} 件のアプリを読み込みました。`;
+                loadStatusDiv.className = 'status';
+
+                // 選択イベントを付与（既存のイベントを除去して再設定）
+                appSelect.onchange = function() {
+                    const selectedId = this.value;
+                    if (!selectedId) return;
+                    const app = json.apps.find(a => a.id === selectedId);
+                    if (!app) return;
+                    // フォームに反映
+                    appIdInput.value = app.id;
+                    appNameInput.value = app.name;
+                    appDescInput.value = app.description || '';
+                    appVersionInput.value = app.version;
+                    // ファイル入力はクリア（任意選択のため、既存をそのまま維持したい場合は空に）
+                    iconFileInput.value = '';
+                    indexFileInput.value = '';
+                    statusDiv.innerText = `📝 アプリ「${app.name}」の情報を読み込みました。必要に応じてファイルを選択し、「アップロード」を押してください。`;
+                    statusDiv.className = 'status';
+                };
+
+                // 現在選択中のアイテムがあれば、自動で反映（初回は未選択）
+                if (appSelect.value) {
+                    appSelect.dispatchEvent(new Event('change'));
+                }
+
+            } catch (err) {
+                loadStatusDiv.innerText = '❌ エラー: ' + err.message;
+                loadStatusDiv.className = 'status error';
+                console.error(err);
+            }
+        }
+
+        loadAppsBtn.addEventListener('click', fetchAppList);
+
+        // ----- アップロード処理（ファイル任意対応） -----
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            const token = tokenInput.value;
+            const repo = repoInput.value;
+            const branch = branchInput.value;
+            const appId = appIdInput.value.trim();
+            const appName = appNameInput.value.trim();
+            const appDesc = appDescInput.value.trim();
+            const appVersion = appVersionInput.value.trim();
+            const iconFile = iconFileInput.files[0];
+            const indexFile = indexFileInput.files[0];
+
+            // 必須項目チェック（ファイルは任意）
+            if (!token || !repo || !appId || !appName) {
+                statusDiv.innerText = '⚠️ トークン、リポジトリ、アプリID、アプリ名は必須です。';
+                statusDiv.className = 'status error';
+                return;
+            }
+
+            statusDiv.innerText = '⏳ 処理中...';
+            statusDiv.className = 'status';
+
+            try {
+                const owner = repo.split('/')[0];
+                const repoName = repo.split('/')[1];
                 const apiBase = `https://api.github.com/repos/${owner}/${repoName}/contents`;
+
+                // 1. apps.json を取得
                 let currentAppsJson = { apps: [] };
                 let sha = null;
                 try {
@@ -120,7 +236,7 @@
                     currentAppsJson.apps.push(appEntry);
                 }
 
-                // 3. 各ファイルを Base64 エンコードしてアップロード
+                // 3. ファイルアップロード（選択されているものだけ）
                 const readFileAsBase64 = (file) => {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
@@ -130,14 +246,6 @@
                     });
                 };
 
-                const iconBase64 = await readFileAsBase64(iconFile);
-                const indexBase64 = await readFileAsBase64(indexFile);
-
-                // アップロード先パス
-                const iconPath = `apps/${appId}/icon.png`;
-                const indexPath = `apps/${appId}/index.html`;
-
-                // ファイルアップロード（既存があれば上書き）
                 const uploadFile = async (path, content, message) => {
                     let fileSha = null;
                     try {
@@ -163,31 +271,47 @@
                         },
                         body: JSON.stringify(body)
                     });
-                    if (!res.ok) throw new Error(`ファイル ${path} のアップロードに失敗`);
+                    if (!res.ok) throw new Error(`ファイル ${path} のアップロードに失敗 (HTTP ${res.status})`);
                 };
 
-                await uploadFile(iconPath, iconBase64, `Add/update icon for ${appId}`);
-                await uploadFile(indexPath, indexBase64, `Add/update index.html for ${appId}`);
+                // アイコンファイルが選択されていればアップロード
+                if (iconFile) {
+                    const iconBase64 = await readFileAsBase64(iconFile);
+                    await uploadFile(`apps/${appId}/icon.png`, iconBase64, `Add/update icon for ${appId}`);
+                }
 
-                // 4. apps.json を更新
+                // index.html が選択されていればアップロード
+                if (indexFile) {
+                    const indexBase64 = await readFileAsBase64(indexFile);
+                    await uploadFile(`apps/${appId}/index.html`, indexBase64, `Add/update index.html for ${appId}`);
+                }
+
+                // 4. apps.json を更新（常に更新）
                 const updatedJson = JSON.stringify(currentAppsJson, null, 2);
                 const jsonBase64 = btoa(unescape(encodeURIComponent(updatedJson))); // UTF-8対応
                 await uploadFile('apps.json', jsonBase64, `Update apps.json for ${appId}`);
 
-                status.innerText = `✅ アプリ "${appName}" をアップロードしました！`;
-                status.className = 'status';
+                statusDiv.innerText = `✅ アプリ "${appName}" をアップロードしました！`;
+                statusDiv.className = 'status';
+
+                // アップロード成功後、アプリ一覧を再読み込みして選択状態をリセット
+                await fetchAppList(); // セレクトボックス更新
+                // 選択をリセット
+                appSelect.value = '';
+                // フォームはそのまま（更新用に残す）
+
             } catch (err) {
-                status.innerText = `❌ エラー: ${err.message}`;
-                status.className = 'status error';
+                statusDiv.innerText = `❌ エラー: ${err.message}`;
+                statusDiv.className = 'status error';
                 console.error(err);
             }
         });
 
-        // 一覧表示
+        // ----- JSON表示（確認用） -----
         document.getElementById('listBtn').addEventListener('click', async () => {
-            const token = document.getElementById('token').value;
-            const repo = document.getElementById('repo').value;
-            const branch = document.getElementById('branch').value;
+            const token = tokenInput.value;
+            const repo = repoInput.value;
+            const branch = branchInput.value;
             const pre = document.getElementById('appList');
             if (!token || !repo) {
                 pre.innerText = 'トークンとリポジトリを設定してください。';
