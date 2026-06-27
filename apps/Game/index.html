@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PaaOS Terminal · 全能の箱庭</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'SF Mono', 'Menlo', 'Consolas', 'Hiragino Sans', monospace;
+            background: #0c0c0c;
+            color: #33ff33;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+            overflow: hidden;
+        }
+        #terminal-container {
+            flex: 1;
+            background: #000000;
+            border-radius: 12px;
+            padding: 16px 12px;
+            overflow-y: auto;
+            border: 1px solid #33ff3340;
+            box-shadow: 0 0 30px #33ff3315;
+            font-size: 13px;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+        }
+        #output {
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-all;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+        .input-line {
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+            background: #0a0a0a;
+            border-radius: 8px;
+            padding: 4px 8px;
+            border: 1px solid #33ff3360;
+        }
+        .prompt {
+            color: #00ff00;
+            font-weight: bold;
+            margin-right: 12px;
+            text-shadow: 0 0 8px #00ff00;
+        }
+        #command-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            padding: 12px 4px;
+            caret-color: #33ff33;
+        }
+        #command-input::placeholder {
+            color: #33ff3350;
+        }
+        .suggestion-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px 8px;
+            background: #0a0a0a;
+            border-top: 1px solid #33ff3330;
+            margin-top: 8px;
+        }
+        .cmd-btn {
+            background: #1a1a1a;
+            color: #33ff33;
+            border: 1px solid #33ff3360;
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .cmd-btn:active {
+            background: #33ff33;
+            color: #000;
+        }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: #0a0a0a;
+            border-radius: 40px;
+            margin-bottom: 10px;
+            border: 1px solid #33ff3340;
+            color: #33ff33;
+            font-size: 12px;
+        }
+        .error { color: #ff4444; }
+        .success { color: #44ff44; }
+        .info { color: #44aaff; }
+        .warn { color: #ffaa00; }
+        .path { color: #ff88ff; }
+        .cmd-highlight { color: #ffff44; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="status-bar">
+    <span id="root-status">🔴 ROOT: 確認中</span>
+    <span id="system-info">PaaOS Terminal v2.0</span>
+    <span id="time-display">--:--:--</span>
+</div>
+
+<div id="terminal-container">
+    <div id="output">
+<span style="color:#44aaff;">╔══════════════════════════════════════════════════════════════╗</span>
+<span style="color:#44aaff;">║</span>  <span style="color:#ffff44; font-weight:bold;">PaaOS Terminal · 全能の箱庭</span>                               <span style="color:#44aaff;">║</span>
+<span style="color:#44aaff;">║</span>  <span style="color:#33ff33;">システムのすべてを日本語コマンドで操作できます</span>                 <span style="color:#44aaff;">║</span>
+<span style="color:#44aaff;">╠══════════════════════════════════════════════════════════════╣</span>
+<span style="color:#44aaff;">║</span>  <span style="color:#ff88ff;">help</span> または <span style="color:#ff88ff;">ヘルプ</span> でコマンド一覧を表示                         <span style="color:#44aaff;">║</span>
+<span style="color:#44aaff;">║</span>  <span style="color:#ff88ff;">root</span> でGATISKエクスプロイトを実行                             <span style="color:#44aaff;">║</span>
+<span style="color:#44aaff;">╚══════════════════════════════════════════════════════════════╝</span>
+
+<span style="color:#44ff44;">▶ システム起動完了。コマンドを入力してください。</span>
+
+    </div>
+    <div class="input-line">
+        <span class="prompt">paaos@root:~$</span>
+        <input type="text" id="command-input" placeholder="コマンドを入力..." autofocus autocomplete="off" enterkeyhint="send">
+    </div>
+</div>
+
+<div class="suggestion-bar">
+    <button class="cmd-btn" onclick="insertCommand('help')">📖 ヘルプ</button>
+    <button class="cmd-btn" onclick="insertCommand('root')">🔓 Root化</button>
+    <button class="cmd-btn" onclick="insertCommand('ls')">📁 ファイル一覧</button>
+    <button class="cmd-btn" onclick="insertCommand('apps')">📱 アプリ一覧</button>
+    <button class="cmd-btn" onclick="insertCommand('theme dark')">🌙 ダーク</button>
+    <button class="cmd-btn" onclick="insertCommand('theme light')">☀️ ライト</button>
+    <button class="cmd-btn" onclick="insertCommand('killall')">⚡ 全終了</button>
+    <button class="cmd-btn" onclick="insertCommand('reboot')">🔄 再起動</button>
+    <button class="cmd-btn" onclick="insertCommand('bsod')">💀 BSoD</button>
+    <button class="cmd-btn" onclick="document.getElementById('command-input').value = ''; document.getElementById('command-input').focus();">🗑️ クリア</button>
+</div>
+
+<script>
+(function() {
+    // ========== 初期化 ==========
+    const output = document.getElementById('output');
+    const input = document.getElementById('command-input');
+    const rootStatus = document.getElementById('root-status');
+    const timeDisplay = document.getElementById('time-display');
+    
+    let isRooted = false;
+    let currentPath = [];
+    let commandHistory = [];
+    let historyIndex = -1;
+    
+    // コマンド履歴
+    const COMMANDS = {
+        // 基本
+        'help': 'ヘルプを表示',
+        'ヘルプ': 'helpのエイリアス',
+        '?': '簡易ヘルプ',
+        'clear': '画面をクリア',
+        'cls': 'clearのエイリアス',
+        'date': '現在日時を表示',
+        'time': '現在時刻を表示',
+        'echo': 'テキストを表示',
+        // Root
+        'root': 'GATISKエクスプロイト実行 (Root権限取得)',
+        'unroot': 'Root権限を解除',
+        'su': 'rootのエイリアス',
+        // ファイル操作
+        'ls': '現在のディレクトリの内容を表示',
+        'dir': 'lsのエイリアス',
+        'cd': 'ディレクトリを移動 [cd パス]',
+        'pwd': '現在のパスを表示',
+        'cat': 'ファイルの内容を表示 [cat ファイル名]',
+        'mkdir': 'ディレクトリを作成 [mkdir 名前]',
+        'touch': 'ファイルを作成 [touch 名前]',
+        'rm': 'ファイル/フォルダを削除 [rm 名前]',
+        'write': 'ファイルに書き込み [write ファイル名 内容]',
+        'edit': 'ファイルを編集 (テキストエリアで)',
+        // アプリ管理
+        'apps': 'インストール済みアプリ一覧',
+        'launch': 'アプリを起動 [launch アプリID]',
+        '起動': 'launchのエイリアス',
+        'kill': 'アプリを終了 [kill アプリID]',
+        '終了': 'killのエイリアス',
+        'killall': '全アプリを強制終了',
+        'running': '実行中のアプリ一覧',
+        // システム
+        'theme': 'テーマ変更 [theme dark/light/amoled/cyber/nature/pastel]',
+        'テーマ': 'themeのエイリアス',
+        'font': 'フォント変更 [font フォント名]',
+        'フォント': 'fontのエイリアス',
+        'color': '色設定 [color 要素 値]',
+        'dock': 'Dock設定 [dock 項目 値]',
+        'reboot': 'システム再起動',
+        '再起動': 'rebootのエイリアス',
+        'shutdown': 'システムシャットダウン',
+        'bsod': 'ブルースクリーンを発動',
+        'recovery': 'リカバリーモード起動',
+        // 情報
+        'status': 'システム状態を表示',
+        '状態': 'statusのエイリアス',
+        'storage': 'ストレージ使用量を表示',
+        '容量': 'storageのエイリアス',
+        'config': '設定を表示/編集 [config get/set キー 値]',
+        '設定': 'configのエイリアス',
+        // パッチ/拡張
+        'patch': 'カーネルパッチを適用',
+        'パッチ': 'patchのエイリアス',
+        'exec': 'JavaScriptコードを実行 [exec コード]',
+        'eval': 'execのエイリアス',
+        // ユーティリティ
+        'screenshot': 'スクリーンショット撮影',
+        'ss': 'screenshotのエイリアス',
+        'notify': '通知を表示 [notify タイトル 本文]',
+        '通知': 'notifyのエイリアス',
+        'cache': 'キャッシュを消去',
+        'reset': '設定を初期化',
+        '初期化': 'resetのエイリアス'
+    };
+    
+    // ========== ユーティリティ ==========
+    function updateTime() {
+        const d = new Date();
+        timeDisplay.textContent = d.toLocaleTimeString('ja-JP');
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+    
+    function postKernel(data) {
+        window.parent.postMessage(data, '*');
+    }
+    
+    function kernelExec(func, args = []) {
+        return new Promise((resolve) => {
+            const listener = (e) => {
+                if (e.data.type === 'KERNEL_EXEC_RESULT') {
+                    window.removeEventListener('message', listener);
+                    resolve(e.data.result);
+                }
+            };
+            window.addEventListener('message', listener);
+            postKernel({ action: 'KERNEL_EXEC', func, args });
+            setTimeout(() => { window.removeEventListener('message', listener); resolve(null); }, 3000);
+        });
+    }
+    
+    function checkRoot() {
+        postKernel({ action: 'CHECK_ROOT_STATUS' });
+        window.addEventListener('message', function handler(e) {
+            if (e.data.type === 'ROOT_STATUS_RESULT') {
+                isRooted = e.data.isRooted;
+                rootStatus.innerHTML = isRooted ? '✅ ROOT: アクティブ' : '🔴 ROOT: 未取得';
+                rootStatus.style.color = isRooted ? '#44ff44' : '#ff4444';
+                window.removeEventListener('message', handler);
+            }
+        });
+    }
+    checkRoot();
+    setInterval(checkRoot, 5000);
+    
+    // 出力関数
+    function print(text, type = '') {
+        const line = document.createElement('div');
+        if (type) line.classList.add(type);
+        line.innerHTML = text;
+        output.appendChild(line);
+        output.scrollTop = output.scrollHeight;
+    }
+    
+    function printError(msg) { print(`<span class="error">❌ エラー: ${msg}</span>`); }
+    function printSuccess(msg) { print(`<span class="success">✅ ${msg}</span>`); }
+    function printInfo(msg) { print(`<span class="info">ℹ️ ${msg}</span>`); }
+    function printWarn(msg) { print(`<span class="warn">⚠️ ${msg}</span>`); }
+    function printCmd(cmd) { print(`<span class="cmd-highlight">▶ ${cmd}</span>`); }
+    
+    // ========== コマンド処理 ==========
+    async function executeCommand(cmdLine) {
+        if (!cmdLine.trim()) return;
+        
+        printCmd(cmdLine);
+        commandHistory.push(cmdLine);
+        historyIndex = commandHistory.length;
+        
+        const parts = cmdLine.trim().split(/\s+/);
+        const cmd = parts[0].toLowerCase();
+        const args = parts.slice(1);
+        
+        // エイリアス解決
+        const aliasMap = {
+            'ヘルプ': 'help', '?': 'help', 'cls': 'clear', 'su': 'root',
+            'dir': 'ls', '起動': 'launch', '終了': 'kill', 'テーマ': 'theme',
+            'フォント': 'font', '再起動': 'reboot', '状態': 'status',
+            '容量': 'storage', '設定': 'config', 'パッチ': 'patch',
+            'ss': 'screenshot', '通知': 'notify', '初期化': 'reset'
+        };
+        const resolvedCmd = aliasMap[cmd] || cmd;
+        
+        try {
+            switch (resolvedCmd) {
+                // ===== 基本 =====
+                case 'help':
+                    print('<span style="color:#ffff44;">═══════════════════════════════════════════════════════════════</span>');
+                    print('<span style="color:#44aaff;">【使用可能なコマンド一覧】</span>');
+                    print('');
+                    const categories = {
+                        '📁 ファイル操作': ['ls', 'cd', 'pwd', 'cat', 'mkdir', 'touch', 'rm', 'write', 'edit'],
+                        '📱 アプリ管理': ['apps', 'launch', 'kill', 'killall', 'running'],
+                        '⚙️ システム': ['theme', 'font', 'color', 'dock', 'reboot', 'shutdown', 'bsod', 'recovery'],
+                        '📊 情報': ['status', 'storage', 'config'],
+                        '🔧 拡張': ['patch', 'exec'],
+                        '🛠️ ユーティリティ': ['screenshot', 'notify', 'cache', 'reset', 'clear', 'date', 'echo']
+                    };
+                    for (const [cat, cmds] of Object.entries(categories)) {
+                        print(`<span style="color:#ff88ff;">${cat}</span>`);
+                        for (const c of cmds) {
+                            print(`  <span style="color:#33ff33;">${c.padEnd(12)}</span> - ${COMMANDS[c] || ''}`);
+                        }
+                        print('');
+                    }
+                    print('<span style="color:#44aaff;">※ 各コマンドの詳細は [コマンド --help] で表示</span>');
+                    print('<span style="color:#ffff44;">═══════════════════════════════════════════════════════════════</span>');
+                    break;
+                    
+                case 'clear':
+                    output.innerHTML = '';
+                    print('<span style="color:#44ff44;">▶ 画面をクリアしました。</span>');
+                    break;
+                    
+                case 'date':
+                    print(new Date().toLocaleString('ja-JP', { dateStyle: 'full', timeStyle: 'long' }));
+                    break;
+                    
+                case 'time':
+                    print(new Date().toLocaleTimeString('ja-JP'));
+                    break;
+                    
+                case 'echo':
+                    print(args.join(' '));
+                    break;
+                    
+                // ===== Root =====
+                case 'root':
+                    postKernel({ action: 'GATISK_EXPLOIT', appId: 'sys.gatisk', targetId: 'sys.gatisk' });
+                    printSuccess('GATISKエクスプロイトを送信しました');
+                    setTimeout(() => { checkRoot(); }, 500);
+                    break;
+                    
+                case 'unroot':
+                    await kernelExec('eval', ['kernel.isRooted = false; document.getElementById("root-indicator").style.display = "none";']);
+                    isRooted = false;
+                    rootStatus.innerHTML = '🔴 ROOT: 未取得';
+                    printSuccess('Root権限を解除しました');
+                    break;
+                    
+                // ===== ファイル操作 =====
+                case 'ls':
+                case 'dir':
+                    try {
+                        const result = await new Promise((resolve) => {
+                            postKernel({ type: 'LIST_DIRECTORY', path: currentPath.join('/') });
+                            window.addEventListener('message', function h(e) {
+                                if (e.data.type === 'DIRECTORY_RESULT') {
+                                    window.removeEventListener('message', h);
+                                    resolve(e.data.entries);
+                                }
+                            });
+                        });
+                        if (result && result.length > 0) {
+                            print(`<span class="path">📂 ${currentPath.join('/') || '/'}</span>`);
+                            for (const entry of result) {
+                                const icon = entry.kind === 'directory' ? '📁' : '📄';
+                                print(`  ${icon} ${entry.name}`);
+                            }
+                        } else {
+                            print('(空のディレクトリ)');
+                        }
+                    } catch (e) {
+                        printError('ディレクトリの読み取りに失敗');
+                    }
+                    break;
+                    
+                case 'cd':
+                    if (args[0] === '..') {
+                        currentPath.pop();
+                    } else if (args[0] && args[0] !== '.') {
+                        currentPath.push(args[0]);
+                    }
+                    printSuccess(`現在のパス: ${currentPath.join('/') || '/'}`);
+                    break;
+                    
+                case 'pwd':
+                    print(`<span class="path">${currentPath.join('/') || '/'}</span>`);
+                    break;
+                    
+                case 'cat':
+                    if (!args[0]) { printError('ファイル名を指定してください'); break; }
+                    try {
+                        const path = [...currentPath, args[0]].join('/');
+                        const data = await new Promise((resolve, reject) => {
+                            postKernel({ type: 'GET_FILE_DATA', path });
+                            window.addEventListener('message', function h(e) {
+                                if (e.data.type === 'FILE_BLOB_RESULT') {
+                                    window.removeEventListener('message', h);
+                                    const decoder = new TextDecoder();
+                                    resolve(decoder.decode(e.data.data));
+                                } else if (e.data.type === 'FILE_ERROR') {
+                                    window.removeEventListener('message', h);
+                                    reject(e.data.message);
+                                }
+                            });
+                        });
+                        print(`<span style="color:#aaa;">--- ${args[0]} ---</span>`);
+                        print(data);
+                        print('<span style="color:#aaa;">--- EOF ---</span>');
+                    } catch (e) {
+                        printError(`ファイル読み取りエラー: ${e}`);
+                    }
+                    break;
+                    
+                case 'mkdir':
+                    if (!args[0]) { printError('ディレクトリ名を指定してください'); break; }
+                    await kernelExec('eval', [`
+                        const dir = await kernel.getFmDir();
+                        await dir.getDirectoryHandle('${args[0]}', { create: true });
+                    `]);
+                    printSuccess(`ディレクトリ '${args[0]}' を作成しました`);
+                    break;
+                    
+                case 'touch':
+                    if (!args[0]) { printError('ファイル名を指定してください'); break; }
+                    await kernelExec('eval', [`
+                        const dir = await kernel.getFmDir();
+                        const h = await dir.getFileHandle('${args[0]}', { create: true });
+                        const w = await h.createWritable();
+                        await w.write('');
+                        await w.close();
+                    `]);
+                    printSuccess(`ファイル '${args[0]}' を作成しました`);
+                    break;
+                    
+                case 'rm':
+                    if (!args[0]) { printError('削除するファイル/フォルダ名を指定してください'); break; }
+                    if (!confirm(`${args[0]} を削除しますか？`)) break;
+                    await kernelExec('eval', [`
+                        const dir = await kernel.getFmDir();
+                        await dir.removeEntry('${args[0]}');
+                    `]);
+                    printSuccess(`'${args[0]}' を削除しました`);
+                    break;
+                    
+                case 'write':
+                    if (args.length < 2) { printError('使用法: write ファイル名 内容'); break; }
+                    const fileName = args[0];
+                    const content = args.slice(1).join(' ');
+                    postKernel({ action: 'SYSTEM_WRITE_FORCE', fileName, content });
+                    printSuccess(`'${fileName}' に書き込みました`);
+                    break;
+                    
+                case 'edit':
+                    if (!args[0]) { printError('ファイル名を指定してください'); break; }
+                    const editContent = prompt(`ファイル '${args[0]}' を編集`, '');
+                    if (editContent !== null) {
+                        postKernel({ action: 'SYSTEM_WRITE_FORCE', fileName: args[0], content: editContent });
+                        printSuccess(`'${args[0]}' を保存しました`);
+                    }
+                    break;
+                    
+                // ===== アプリ管理 =====
+                case 'apps':
+                    const apps = await kernelExec('eval', ['return Object.keys(kernel.apps);']);
+                    print('<span style="color:#ff88ff;">📱 インストール済みアプリ:</span>');
+                    if (apps) {
+                        apps.split(',').forEach(id => print(`  • ${id.trim()}`));
+                    }
+                    break;
+                    
+                case 'launch':
+                    if (!args[0]) { printError('アプリIDを指定してください'); break; }
+                    postKernel({ action: 'launchApp', targetId: args[0] });
+                    printSuccess(`アプリ '${args[0]}' を起動しました`);
+                    break;
+                    
+                case 'kill':
+                    if (!args[0]) { printError('アプリIDを指定してください'); break; }
+                    postKernel({ action: 'forceQuit', targetId: args[0] });
+                    printSuccess(`アプリ '${args[0]}' を終了しました`);
+                    break;
+                    
+                case 'killall':
+                    postKernel({ action: 'KILL_ALL_APPS' });
+                    printSuccess('全アプリを強制終了しました');
+                    break;
+                    
+                case 'running':
+                    const running = await kernelExec('eval', ['return kernel.runningApps;']);
+                    print('<span style="color:#ff88ff;">🟢 実行中のアプリ:</span>');
+                    if (running && running !== '') {
+                        running.split(',').forEach(id => print(`  • ${id.trim()}`));
+                    } else {
+                        print('  (なし)');
+                    }
+                    break;
+                    
+                // ===== システム =====
+                case 'theme':
+                    const theme = args[0] || 'dark';
+                    const themeMap = {
+                        dark: ['#ff3e3e', '#000000', '#1a1a1a', '#ffffff'],
+                        light: ['#007aff', '#f2f2f7', '#ffffff', '#000000'],
+                        amoled: ['#ff0055', '#000000', '#000000', '#ffffff'],
+                        cyber: ['#00ffcc', '#0d0221', '#150734', '#00ffcc'],
+                        nature: ['#2e7d32', '#1b2e1b', '#2a3a2a', '#e8f5e9'],
+                        pastel: ['#ff99cc', '#fff0f5', '#ffffff', '#555555']
+                    };
+                    const colors = themeMap[theme] || themeMap.dark;
+                    postKernel({ action: 'SET_SYSTEM_STYLE', selector: ':root', styles: {
+                        '--accent': colors[0], '--bg': colors[1], '--win-bg': colors[2], '--text': colors[3]
+                    }});
+                    printSuccess(`テーマを '${theme}' に変更しました`);
+                    break;
+                    
+                case 'font':
+                    const font = args.join(' ') || "'Roboto', 'Noto Sans JP', sans-serif";
+                    postKernel({ action: 'SET_SYSTEM_STYLE', selector: ':root', styles: { fontFamily: font } });
+                    postKernel({ action: 'SET_SYSTEM_STYLE', selector: 'body', styles: { fontFamily: font } });
+                    printSuccess(`フォントを変更しました`);
+                    break;
+                    
+                case 'reboot':
+                    if (confirm('システムを再起動しますか？')) {
+                        postKernel({ action: 'reboot' });
+                    }
+                    break;
+                    
+                case 'shutdown':
+                    if (confirm('システムをシャットダウンしますか？')) {
+                        postKernel({ action: 'CRITICAL_ERROR', errorCode: '0xSHUTDOWN', involvedFile: 'user request' });
+                    }
+                    break;
+                    
+                case 'bsod':
+                    postKernel({ action: 'CRITICAL_ERROR', errorCode: args[0] || '0xTERMINAL', involvedFile: args[1] || 'terminal.sys' });
+                    printWarn('BSoDを発動しました');
+                    break;
+                    
+                case 'recovery':
+                    await kernelExec('launchRecovery', []);
+                    printWarn('リカバリーモードを起動しました');
+                    break;
+                    
+                // ===== 情報 =====
+                case 'status':
+                    const rootState = isRooted ? '✅ 取得済み' : '❌ 未取得';
+                    const appsCount = await kernelExec('eval', ['return Object.keys(kernel.apps).length;']);
+                    const runningCount = await kernelExec('eval', ['return kernel.runningApps.length;']);
+                    const themeState = await kernelExec('eval', ['return kernel.config.theme;']);
+                    print('<span style="color:#44aaff;">══════════ システム状態 ══════════</span>');
+                    print(`  Root状態      : ${rootState}`);
+                    print(`  インストールアプリ : ${appsCount || '?'} 個`);
+                    print(`  実行中アプリ     : ${runningCount || '0'} 個`);
+                    print(`  現在のテーマ     : ${themeState || 'light'}`);
+                    print(`  現在のパス       : ${currentPath.join('/') || '/'}`);
+                    print('<span style="color:#44aaff;">══════════════════════════════════</span>');
+                    break;
+                    
+                case 'storage':
+                    const estimate = await navigator.storage.estimate();
+                    const used = Math.round(estimate.usage / 1024 / 1024);
+                    const quota = Math.round(estimate.quota / 1024 / 1024 / 1024);
+                    print(`💾 ストレージ使用量: ${used}MB / ${quota}GB (${Math.round(used/quota/10)}%)`);
+                    break;
+                    
+                case 'config':
+                    if (args[0] === 'get') {
+                        const val = await kernelExec('eval', [`return kernel.config.${args[1]};`]);
+                        print(`${args[1]} = ${JSON.stringify(val)}`);
+                    } else if (args[0] === 'set' && args[1] && args[2]) {
+                        await kernelExec('eval', [`kernel.config.${args[1]} = ${args[2]}; kernel.saveConfig();`]);
+                        printSuccess(`config.${args[1]} を設定しました`);
+                    } else {
+                        const cfg = await kernelExec('eval', ['return JSON.stringify(kernel.config, null, 2);']);
+                        print('<span style="color:#aaa;">--- config.json ---</span>');
+                        print(cfg || '{}');
+                    }
+                    break;
+                    
+                // ===== パッチ =====
+                case 'patch':
+                    const patchCode = prompt('パッチコードを入力してください（JavaScript）:', 
+                        '// 例: 永続Root化\nkernel.boot = async function() {\n    await originalBoot.call(this);\n    this.isRooted = true;\n    return;\n};');
+                    if (patchCode) {
+                        await kernelExec('eval', [patchCode]);
+                        printSuccess('パッチを適用しました');
+                    }
+                    break;
+                    
+                case 'exec':
+                case 'eval':
+                    const code = args.join(' ');
+                    if (!code) { printError('実行するコードを入力してください'); break; }
+                    try {
+                        const result = await kernelExec('eval', [code]);
+                        print(`<span style="color:#44ff44;">実行結果:</span> ${result || '(void)'}`);
+                    } catch (e) {
+                        printError(`実行エラー: ${e.message}`);
+                    }
+                    break;
+                    
+                // ===== ユーティリティ =====
+                case 'screenshot':
+                    await kernelExec('takeSystemScreenshot', []);
+                    printSuccess('スクリーンショットを撮影しました');
+                    break;
+                    
+                case 'notify':
+                    postKernel({ action: 'showSystemPopup', title: args[0] || '通知', message: args.slice(1).join(' ') || '本文' });
+                    printSuccess('通知を表示しました');
+                    break;
+                    
+                case 'cache':
+                    await kernelExec('clearCache', []);
+                    printSuccess('キャッシュを消去しました');
+                    break;
+                    
+                case 'reset':
+                    if (confirm('すべての設定を初期化しますか？')) {
+                        await kernelExec('factoryReset', []);
+                        printWarn('設定を初期化しました。再起動します...');
+                    }
+                    break;
+                    
+                default:
+                    printError(`不明なコマンド: ${cmd} (help で一覧表示)`);
+            }
+        } catch (e) {
+            printError(`コマンド実行中にエラーが発生しました: ${e.message || e}`);
+        }
+    }
+    
+    // ========== イベント ==========
+    input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+            const cmd = input.value.trim();
+            if (cmd) {
+                await executeCommand(cmd);
+            }
+            input.value = '';
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (historyIndex > 0) {
+                historyIndex--;
+                input.value = commandHistory[historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                input.value = commandHistory[historyIndex];
+            } else {
+                historyIndex = commandHistory.length;
+                input.value = '';
+            }
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            const val = input.value.toLowerCase();
+            const matches = Object.keys(COMMANDS).filter(c => c.startsWith(val));
+            if (matches.length === 1) {
+                input.value = matches[0];
+            } else if (matches.length > 1) {
+                print(`<span class="info">候補: ${matches.join(', ')}</span>`);
+            }
+        }
+    });
+    
+    window.insertCommand = function(cmd) {
+        input.value = cmd;
+        input.focus();
+    };
+    
+    // 起動時Root状態確認
+    setTimeout(() => {
+        print('');
+        checkRoot();
+    }, 500);
+})();
+</script>
+</body>
+</html>
