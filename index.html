@@ -16,14 +16,24 @@
 <body>
     <h1>📦 PaaOS アプリストア管理</h1>
     <div class="card">
-        <h2>設定</h2>
+    <h2>設定</h2>
+    <!-- ★★★ <form> タグで囲む ★★★ -->
+    <form id="settings-form">
         <label>GitHub トークン</label>
-        <input type="password" id="token" placeholder="ghp_xxxx">
+        <input type="password" id="token" name="token" 
+               placeholder="ghp_xxxx" 
+               autocomplete="current-password">
+
         <label>リポジトリ（owner/repo）</label>
-        <input type="text" id="repo" value="PaaOS-Apps/store">
+        <input type="text" id="repo" name="repo" 
+               value="PaaOS-Apps/store" 
+               autocomplete="organization">
+
         <label>ブランチ</label>
-        <input type="text" id="branch" value="main">
-    </div>
+        <input type="text" id="branch" name="branch" value="main">
+    </form>
+    <!-- フォームの送信ボタンは不要（既存のアップロードボタンを使う） -->
+</div>
 
     <div class="card">
         <h2>アプリ情報</h2>
