@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天気</title>
+    <style>
+        body { font-family: sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #fff; }
+        .container { text-align: center; padding: 40px; background: rgba(255,255,255,0.1); border-radius: 24px; backdrop-filter: blur(10px); }
+        .temp { font-size: 64px; font-weight: bold; }
+        .desc { font-size: 20px; opacity: 0.9; margin-top: 4px; }
+        .detail { font-size: 14px; opacity: 0.7; margin-top: 16px; }
+        .btn { padding: 12px 32px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 40px; color: #fff; font-size: 14px; cursor: pointer; margin-top: 16px; }
+        .btn:active { background: rgba(255,255,255,0.3); }
+        .city { font-size: 24px; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="city">📍 現在地</div>
+        <div class="temp" id="temp">--°C</div>
+        <div class="desc" id="desc">読み込み中...</div>
+        <div class="detail" id="detail">湿度: --% | 風速: --m/s</div>
+        <button class="btn" onclick="getWeather()">🔄 更新</button>
+    </div>
+    <script>
+        async function getWeather() {
+            try {
+                // 位置情報を取得（ダミー：東京）
+                const lat = 35.6762;
+                const lon = 139.6503;
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=Asia/Tokyo`);
+                const data = await res.json();
+                const w = data.current_weather;
+                document.getElementById('temp').textContent = `${w.temperature}°C`;
+                document.getElementById('desc').textContent = w.weathercode === 0 ? '☀️ 晴れ' : 
+                                                           w.weathercode < 20 ? '⛅ 曇り' : '🌧️ 雨';
+                document.getElementById('detail').textContent = `風速: ${w.windspeed}km/h | 時刻: ${w.time.split('T')[1]}`;
+            } catch(e) {
+                document.getElementById('desc').textContent = '⚠️ 取得エラー';
+            }
+        }
+        getWeather();
+    </script>
+</body>
+</html>
