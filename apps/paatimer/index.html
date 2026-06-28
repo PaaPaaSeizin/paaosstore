@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タイマー</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #fff; }
+        .container { text-align: center; }
+        .time { font-size: 72px; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: 4px; }
+        .controls { display: flex; gap: 16px; margin-top: 24px; justify-content: center; }
+        .btn { padding: 12px 32px; border: none; border-radius: 40px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn:active { transform: scale(0.95); }
+        .btn.start { background: #4CAF50; color: #fff; }
+        .btn.stop { background: #ff6b35; color: #fff; }
+        .btn.reset { background: #666; color: #fff; }
+        .input-row { margin-top: 16px; display: flex; gap: 8px; justify-content: center; }
+        .input-row input { width: 60px; padding: 8px; border-radius: 8px; border: 1px solid #444; background: #2d2d2d; color: #fff; text-align: center; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="time" id="display">00:00</div>
+        <div class="input-row">
+            <input id="minutes" type="number" min="0" max="59" value="1" placeholder="分">
+            <input id="seconds" type="number" min="0" max="59" value="0" placeholder="秒">
+        </div>
+        <div class="controls">
+            <button class="btn start" onclick="startTimer()">▶ 開始</button>
+            <button class="btn stop" onclick="stopTimer()">⏹ 停止</button>
+            <button class="btn reset" onclick="resetTimer()">↺ リセット</button>
+        </div>
+    </div>
+    <script>
+        let timer = null;
+        let remaining = 60;
+        const display = document.getElementById('display');
+        function updateDisplay(seconds) {
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            display.textContent = `${m}:${s}`;
+        }
+        function startTimer() {
+            if (timer) return;
+            const min = parseInt(document.getElementById('minutes').value) || 0;
+            const sec = parseInt(document.getElementById('seconds').value) || 0;
+            remaining = min * 60 + sec;
+            if (remaining <= 0) { remaining = 60; }
+            updateDisplay(remaining);
+            timer = setInterval(() => {
+                remaining--;
+                updateDisplay(remaining);
+                if (remaining <= 0) {
+                    clearInterval(timer);
+                    timer = null;
+                    display.textContent = '00:00';
+                    alert('⏰ タイムアップ！');
+                }
+            }, 1000);
+        }
+        function stopTimer() {
+            if (timer) { clearInterval(timer); timer = null; }
+        }
+        function resetTimer() {
+            stopTimer();
+            const min = parseInt(document.getElementById('minutes').value) || 0;
+            const sec = parseInt(document.getElementById('seconds').value) || 0;
+            remaining = min * 60 + sec;
+            if (remaining <= 0) remaining = 60;
+            updateDisplay(remaining);
+        }
+        resetTimer();
+    </script>
+</body>
+</html>
