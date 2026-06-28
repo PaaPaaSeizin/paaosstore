@@ -15,10 +15,22 @@
     {
       "id": "PaaOS",
       "name": "PaaOS",
-      "description": "電卓。 制作者:Paa",
+      "description": "é»åã å¶ä½è:Paa",
       "version": "1.0.0",
       "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/PaaOS/icon.png",
       "basePath": "apps/PaaOS/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
+    },
+    {
+      "id": "paa.calculator",
+      "name": "paa.calculator",
+      "description": "電卓。 制作者:Paa",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paa.calculator/icon.png",
+      "basePath": "apps/paa.calculator/",
       "files": [
         "index.html",
         "icon.png"
