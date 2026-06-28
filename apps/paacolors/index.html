@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カラーパレット</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; margin: 0; padding: 20px; color: #fff; }
+        .container { max-width: 400px; margin: 0 auto; }
+        h1 { font-size: 20px; text-align: center; }
+        .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 16px; }
+        .color-box { aspect-ratio: 1; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 12px; transition: transform 0.2s; }
+        .color-box:active { transform: scale(0.9); }
+        .selected { text-align: center; margin-top: 16px; font-size: 14px; }
+        .selected .hex { font-size: 20px; font-weight: bold; }
+        .btn { width: 100%; padding: 12px; background: #4CAF50; border: none; border-radius: 8px; color: #fff; font-weight: bold; margin-top: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 カラーパレット</h1>
+        <div class="color-grid" id="grid"></div>
+        <div class="selected">
+            <div>選択中の色</div>
+            <div class="hex" id="hex">#FFFFFF</div>
+            <div style="width:60px; height:60px; border-radius:12px; margin:8px auto; border:2px solid #444;" id="preview"></div>
+        </div>
+        <button class="btn" onclick="randomColor()">🎲 ランダム</button>
+    </div>
+    <script>
+        const colors = [
+            '#FF6B6B', '#FF9F43', '#FECA57', '#48DBFB',
+            '#0ABDE3', '#10AC84', '#EE5A24', '#5F27CD',
+            '#341F97', '#FF6FB7', '#FF9FF3', '#54A0FF',
+            '#5F27CD', '#FF9F43', '#10AC84', '#FF6B6B'
+        ];
+        const grid = document.getElementById('grid');
+        const hex = document.getElementById('hex');
+        const preview = document.getElementById('preview');
+        let selected = '#FFFFFF';
+        colors.forEach(c => {
+            const div = document.createElement('div');
+            div.className = 'color-box';
+            div.style.background = c;
+            div.textContent = c.replace('#', '');
+            div.onclick = () => selectColor(c);
+            grid.appendChild(div);
+        });
+        function selectColor(c) {
+            selected = c;
+            hex.textContent = c;
+            preview.style.background = c;
+            document.body.style.background = c + '33';
+        }
+        function randomColor() {
+            const c = colors[Math.floor(Math.random() * colors.length)];
+            selectColor(c);
+        }
+        selectColor('#FF6B6B');
+    </script>
+</body>
+</html>
