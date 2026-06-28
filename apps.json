@@ -119,6 +119,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "paahello",
+      "name": "paahello",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paahello/icon.png",
+      "basePath": "apps/paahello/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
