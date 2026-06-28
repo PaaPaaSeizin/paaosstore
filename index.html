@@ -315,7 +315,10 @@
 
                 // 4. apps.json を更新（常に更新）
                 const updatedJson = JSON.stringify(currentAppsJson, null, 2);
-                const jsonBase64 = btoa(unescape(encodeURIComponent(updatedJson)));
+                // UTF-8 → Base64 に正しく変換
+const encoder = new TextEncoder();
+const data = encoder.encode(updatedJson);
+const jsonBase64 = btoa(String.fromCharCode(...data));
                 await uploadFile('apps.json', jsonBase64, `Update apps.json for ${appId}`);
 
                 statusDiv.innerText = `✅ アプリ "${appId}" をアップロードしました！（ID＝名前＝フォルダ名）`;
