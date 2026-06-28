@@ -140,8 +140,13 @@
                 if (!res.ok) throw new Error('apps.json の取得に失敗しました (HTTP ' + res.status + ')');
 
                 const data = await res.json();
-                const content = atob(data.content);
-                const json = JSON.parse(content);
+                const binaryString = atob(data.content);
+const bytes = new Uint8Array(binaryString.length);
+for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+}
+const content = new TextDecoder('utf-8').decode(bytes);
+const json = JSON.parse(content);
 
                 if (!json.apps || json.apps.length === 0) {
                     loadStatusDiv.innerText = '📭 アプリが一つも登録されていません。';
@@ -354,8 +359,14 @@ const jsonBase64 = btoa(String.fromCharCode(...data));
                 });
                 if (!res.ok) throw new Error('取得失敗');
                 const data = await res.json();
-                const content = atob(data.content);
-                const json = JSON.parse(content);
+const binaryString = atob(data.content);
+const bytes = new Uint8Array(binaryString.length);
+for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+}
+const content = new TextDecoder('utf-8').decode(bytes);
+const json = JSON.parse(content);
+
                 pre.innerText = JSON.stringify(json, null, 2);
             } catch(e) {
                 pre.innerText = 'エラー: ' + e.message;
