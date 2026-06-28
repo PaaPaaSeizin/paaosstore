@@ -15,7 +15,7 @@
     {
       "id": "paa.calculator",
       "name": "paa.calculator",
-      "description": "é»åã å¶ä½è:Paa",
+      "description": "Ã©ÂÂ»Ã¥ÂÂÃ£ÂÂ Ã¥ÂÂ¶Ã¤Â½ÂÃ¨ÂÂ:Paa",
       "version": "1.0.0",
       "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paa.calculator/icon.png",
       "basePath": "apps/paa.calculator/",
@@ -25,12 +25,24 @@
       ]
     },
     {
-      "id": "ちんちん",
-      "name": "ちんちん",
-      "description": "ツインあ",
+      "id": "ã¡ãã¡ã",
+      "name": "ã¡ãã¡ã",
+      "description": "ãã¤ã³ã",
       "version": "1.0.0",
-      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/ちんちん/icon.png",
-      "basePath": "apps/ちんちん/",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/ã¡ãã¡ã/icon.png",
+      "basePath": "apps/ã¡ãã¡ã/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
+    },
+    {
+      "id": "calc",
+      "name": "calc",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/calc/icon.png",
+      "basePath": "apps/calc/",
       "files": [
         "index.html",
         "icon.png"
