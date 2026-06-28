@@ -57,10 +57,15 @@
             フォルダ名もこのIDで作成されるため、PaaOS上で確実に認識されます。
         </div>
 
-        <label>アプリID（英数字・ハイフン） <span style="color:#c00;">*</span></label>
-        <input type="text" id="appId" placeholder="例: calculator" oninput="syncName()">
+        <label>アプリID（英数字・ハイフン・アンダースコアのみ） <span style="color:#c00;">*</span></label>
+        <input type="text" id="appId" placeholder="例: calculator" 
+               pattern="[a-zA-Z0-9_-]+" 
+               oninput="this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, ''); syncName()"
+               required>
+        <div class="char-counter">使用可能: 英数字 a-z A-Z 0-9 と - _ のみ</div>
 
-        <label>アプリ名 <span style="color:#c00;">*</span></label>
+        <label>アプリ名（IDと同じになります） <span style="color:#c00;">*</span></label>
+        <input type="text" id="appName" class="readonly-field" readonly>
         <input type="text" id="appName" class="readonly-field" readonly>
 
         <label>説明</label>
