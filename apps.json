@@ -83,6 +83,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "paadice",
+      "name": "paadice",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paadice/icon.png",
+      "basePath": "apps/paadice/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
