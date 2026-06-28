@@ -14,6 +14,8 @@
         .flex-row { display: flex; gap: 10px; align-items: center; }
         .flex-row > * { flex: 1; }
         .file-note { font-size: 12px; color: #888; margin-top: -4px; margin-bottom: 8px; }
+        .readonly-field { background: #f0f0f0; cursor: not-allowed; }
+        .warning { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 16px; }
     </style>
 </head>
 <body>
@@ -49,11 +51,17 @@
 
     <div class="card">
         <h2>アプリ情報</h2>
-        <label>アプリID（英数字・ハイフン）</label>
-        <input type="text" id="appId" placeholder="myapp">
+        
+        <div class="warning">
+            ⚠️ <strong>重要：</strong>アプリIDとアプリ名は常に同じ値になります。<br>
+            フォルダ名もこのIDで作成されるため、PaaOS上で確実に認識されます。
+        </div>
 
-        <label>アプリ名</label>
-        <input type="text" id="appName" placeholder="My App">
+        <label>アプリID（英数字・ハイフン） <span style="color:#c00;">*</span></label>
+        <input type="text" id="appId" placeholder="例: calculator" oninput="syncName()">
+
+        <label>アプリ名 <span style="color:#c00;">*</span></label>
+        <input type="text" id="appName" class="readonly-field" readonly>
 
         <label>説明</label>
         <input type="text" id="appDesc" placeholder="説明文">
@@ -80,6 +88,17 @@
     </div>
 
     <script>
+        // ----- 同期関数：appId → appName を自動コピー -----
+        function syncName() {
+            const id = document.getElementById('appId').value;
+            const nameInput = document.getElementById('appName');
+            // アプリ名をIDと同じにする（ただし空の場合は空のまま）
+            nameInput.value = id;
+        }
+
+        // 手動で名前を変更できないようにする（既に readonly だが念のため）
+        document.getElementById('appName').addEventListener('keydown', (e) => e.preventDefault());
+
         // ----- ユーティリティ -----
         const tokenInput = document.getElementById('token');
         const repoInput = document.getElementById('repo');
@@ -143,25 +162,25 @@
                 loadStatusDiv.innerText = `✅ ${json.apps.length} 件のアプリを読み込みました。`;
                 loadStatusDiv.className = 'status';
 
-                // 選択イベントを付与（既存のイベントを除去して再設定）
+                // 選択イベントを付与
                 appSelect.onchange = function() {
                     const selectedId = this.value;
                     if (!selectedId) return;
                     const app = json.apps.find(a => a.id === selectedId);
                     if (!app) return;
-                    // フォームに反映
+                    // フォームに反映（IDと名前は同じ値でセット）
                     appIdInput.value = app.id;
-                    appNameInput.value = app.name;
+                    appNameInput.value = app.id;  // ★ 強制的にIDと同じにする
                     appDescInput.value = app.description || '';
                     appVersionInput.value = app.version;
-                    // ファイル入力はクリア（任意選択のため、既存をそのまま維持したい場合は空に）
+                    // ファイル入力はクリア
                     iconFileInput.value = '';
                     indexFileInput.value = '';
                     statusDiv.innerText = `📝 アプリ「${app.name}」の情報を読み込みました。必要に応じてファイルを選択し、「アップロード」を押してください。`;
                     statusDiv.className = 'status';
                 };
 
-                // 現在選択中のアイテムがあれば、自動で反映（初回は未選択）
+                // 現在選択中のアイテムがあれば、自動で反映
                 if (appSelect.value) {
                     appSelect.dispatchEvent(new Event('change'));
                 }
@@ -175,21 +194,29 @@
 
         loadAppsBtn.addEventListener('click', fetchAppList);
 
-        // ----- アップロード処理（ファイル任意対応） -----
+        // ----- アップロード処理（ID＝名前強制） -----
         document.getElementById('uploadBtn').addEventListener('click', async () => {
             const token = tokenInput.value;
             const repo = repoInput.value;
             const branch = branchInput.value;
             const appId = appIdInput.value.trim();
-            const appName = appNameInput.value.trim();
+            const appName = appNameInput.value.trim();  // ← IDと同じ値が入っている
             const appDesc = appDescInput.value.trim();
             const appVersion = appVersionInput.value.trim();
             const iconFile = iconFileInput.files[0];
             const indexFile = indexFileInput.files[0];
 
             // 必須項目チェック（ファイルは任意）
-            if (!token || !repo || !appId || !appName) {
-                statusDiv.innerText = '⚠️ トークン、リポジトリ、アプリID、アプリ名は必須です。';
+            if (!token || !repo || !appId) {
+                statusDiv.innerText = '⚠️ トークン、リポジトリ、アプリIDは必須です。';
+                statusDiv.className = 'status error';
+                return;
+            }
+
+            // ★ 念のため：名前がIDと異なる場合は強制的に合わせる
+            if (appName !== appId) {
+                appNameInput.value = appId;
+                statusDiv.innerText = '⚠️ アプリ名をアプリIDに合わせました。';
                 statusDiv.className = 'status error';
                 return;
             }
@@ -219,11 +246,11 @@
                     }
                 } catch(e) {}
 
-                // 2. アプリ情報を更新/追加
+                // 2. アプリ情報を更新/追加（ID＝名前）
                 const appIndex = currentAppsJson.apps.findIndex(a => a.id === appId);
                 const appEntry = {
                     id: appId,
-                    name: appName,
+                    name: appId,  // ★★★ 強制的にIDと同じ名前 ★★★
                     description: appDesc || '',
                     version: appVersion,
                     icon: `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/apps/${appId}/icon.png`,
@@ -288,17 +315,16 @@
 
                 // 4. apps.json を更新（常に更新）
                 const updatedJson = JSON.stringify(currentAppsJson, null, 2);
-                const jsonBase64 = btoa(unescape(encodeURIComponent(updatedJson))); // UTF-8対応
+                const jsonBase64 = btoa(unescape(encodeURIComponent(updatedJson)));
                 await uploadFile('apps.json', jsonBase64, `Update apps.json for ${appId}`);
 
-                statusDiv.innerText = `✅ アプリ "${appName}" をアップロードしました！`;
+                statusDiv.innerText = `✅ アプリ "${appId}" をアップロードしました！（ID＝名前＝フォルダ名）`;
                 statusDiv.className = 'status';
 
-                // アップロード成功後、アプリ一覧を再読み込みして選択状態をリセット
-                await fetchAppList(); // セレクトボックス更新
+                // アップロード成功後、アプリ一覧を再読み込み
+                await fetchAppList();
                 // 選択をリセット
                 appSelect.value = '';
-                // フォームはそのまま（更新用に残す）
 
             } catch (err) {
                 statusDiv.innerText = `❌ エラー: ${err.message}`;
@@ -331,6 +357,11 @@
             } catch(e) {
                 pre.innerText = 'エラー: ' + e.message;
             }
+        });
+
+        // 初期化：アプリ名欄にIDを自動反映
+        document.addEventListener('DOMContentLoaded', () => {
+            syncName();
         });
     </script>
 </body>
