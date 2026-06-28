@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パスワード生成</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #fff; }
+        .container { max-width: 360px; padding: 32px; background: #2d2d2d; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        h1 { font-size: 20px; text-align: center; margin-bottom: 24px; }
+        .password { font-size: 24px; text-align: center; padding: 16px; background: #1a1a1a; border-radius: 8px; letter-spacing: 4px; word-break: break-all; font-family: monospace; }
+        .options { margin-top: 16px; }
+        .options label { display: block; margin: 8px 0; font-size: 14px; }
+        .options input[type="number"] { width: 60px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #1a1a1a; color: #fff; }
+        .options input[type="checkbox"] { accent-color: #ff6b35; }
+        .btn { width: 100%; padding: 12px; background: #ff6b35; border: none; border-radius: 8px; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 16px; }
+        .btn:active { opacity: 0.8; }
+        .btn.copy { background: #4CAF50; }
+        .info { font-size: 12px; opacity: 0.5; text-align: center; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 パスワード生成</h1>
+        <div class="password" id="password">Click Generate</div>
+        <div class="options">
+            <label>長さ: <input id="length" type="number" min="4" max="64" value="12"></label>
+            <label><input id="upper" type="checkbox" checked> 大文字 (A-Z)</label>
+            <label><input id="lower" type="checkbox" checked> 小文字 (a-z)</label>
+            <label><input id="number" type="checkbox" checked> 数字 (0-9)</label>
+            <label><input id="symbol" type="checkbox" checked> 記号 (!@#$...)</label>
+        </div>
+        <button class="btn" onclick="generate()">🔄 生成</button>
+        <button class="btn copy" onclick="copyPassword()">📋 コピー</button>
+        <div class="info" id="info">クリックでコピー</div>
+    </div>
+    <script>
+        const chars = {
+            upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            lower: 'abcdefghijklmnopqrstuvwxyz',
+            number: '0123456789',
+            symbol: '!@#$%^&*()_+-=[]{};:,.<>?'
+        };
+        function generate() {
+            const len = parseInt(document.getElementById('length').value) || 12;
+            const use = {};
+            use.upper = document.getElementById('upper').checked;
+            use.lower = document.getElementById('lower').checked;
+            use.number = document.getElementById('number').checked;
+            use.symbol = document.getElementById('symbol').checked;
+            let pool = '';
+            for (const [k, v] of Object.entries(use)) {
+                if (v) pool += chars[k];
+            }
+            if (!pool) { pool = chars.lower; }
+            let pwd = '';
+            for (let i = 0; i < len; i++) {
+                pwd += pool[Math.floor(Math.random() * pool.length)];
+            }
+            document.getElementById('password').textContent = pwd;
+        }
+        function copyPassword() {
+            const pwd = document.getElementById('password').textContent;
+            navigator.clipboard.writeText(pwd).then(() => {
+                document.getElementById('info').textContent = '✅ コピーしました！';
+                setTimeout(() => document.getElementById('info').textContent = 'クリックでコピー', 2000);
+            });
+        }
+        generate();
+    </script>
+</body>
+</html>
