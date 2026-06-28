@@ -107,6 +107,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "paacolors",
+      "name": "paacolors",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paacolors/icon.png",
+      "basePath": "apps/paacolors/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
