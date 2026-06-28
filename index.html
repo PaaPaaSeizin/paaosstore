@@ -10,12 +10,16 @@
         button { background: #0078d4; color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { opacity: 0.8; }
         .status { padding: 10px; background: #e8f0fe; border-radius: 8px; }
-        .error { background: #fce8e8; color: #c00; }
+        .status.error { background: #fce8e8; color: #c00; }
+        .status.success { background: #e8f5e9; color: #2e7d32; }
         .flex-row { display: flex; gap: 10px; align-items: center; }
         .flex-row > * { flex: 1; }
         .file-note { font-size: 12px; color: #888; margin-top: -4px; margin-bottom: 8px; }
         .readonly-field { background: #f0f0f0; cursor: not-allowed; }
         .warning { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 16px; }
+        .char-counter { font-size: 12px; color: #888; text-align: right; margin-top: -4px; }
+        .progress-bar { width: 100%; height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; margin: 8px 0; display: none; }
+        .progress-bar .fill { height: 100%; background: #4CAF50; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body>
@@ -67,19 +71,21 @@
         <label>アプリ名（IDと同じになります） <span style="color:#c00;">*</span></label>
         <input type="text" id="appName" class="readonly-field" readonly>
 
-        <label>説明</label>
-        <input type="text" id="appDesc" placeholder="説明文">
+        <label>説明（日本語OK）</label>
+        <input type="text" id="appDesc" placeholder="説明文（日本語可）">
 
         <label>バージョン</label>
         <input type="text" id="appVersion" value="1.0.0">
 
-        <label>アイコンファイル（PNG）<span style="font-weight:normal;font-size:12px;color:#888;">（任意：選択しないと既存を維持）</span></label>
+        <label>アイコンファイル（PNG）<span style="font-weight:normal;font-size:12px;color:#888;">（任意：選択しないと白いアイコンになります）</span></label>
         <input type="file" id="iconFile" accept="image/png">
         <div class="file-note">更新時にアイコンを変更したい場合のみ選択</div>
 
-        <label>index.html ファイル<span style="font-weight:normal;font-size:12px;color:#888;">（任意：選択しないと既存を維持）</span></label>
+        <label>index.html ファイル<span style="font-weight:normal;font-size:12px;color:#888;">（必須：初回登録時は必ず選択）</span></label>
         <input type="file" id="indexFile" accept="text/html">
         <div class="file-note">更新時にHTMLを変更したい場合のみ選択</div>
+
+        <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
 
         <button id="uploadBtn">アップロード（新規追加／更新）</button>
         <div id="status" class="status">準備完了</div>
@@ -87,21 +93,53 @@
 
     <div class="card">
         <h2>現在の apps.json（確認用）</h2>
-        <button id="listBtn">JSONを表示</button>
+        <button id="listBtn">🔄 JSONを最新表示</button>
         <pre id="appList" style="background:#eee; padding:10px; border-radius:8px; max-height:300px; overflow:auto;"></pre>
     </div>
 
     <script>
+        // ----- ユーティリティ：UTF-8 → Base64 正規変換 -----
+        function utf8ToBase64(str) {
+            // 日本語対応のBase64エンコード
+            return btoa(unescape(encodeURIComponent(str)));
+        }
+
+        function base64ToUtf8(str) {
+            // 日本語対応のBase64デコード
+            return decodeURIComponent(escape(atob(str)));
+        }
+
+        // ----- ダミーアイコン生成（白いPNG） -----
+        function generateDummyIcon() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            
+            // 白背景
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, 64, 64);
+            
+            // 枠線
+            ctx.strokeStyle = '#CCCCCC';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(1, 1, 62, 62);
+            
+            // 中央にアプリアイコンらしいマーク
+            ctx.fillStyle = '#DDDDDD';
+            ctx.font = '24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('📱', 32, 34);
+            
+            return canvas.toDataURL('image/png').split(',')[1];
+        }
+
         // ----- 同期関数：appId → appName を自動コピー -----
         function syncName() {
             const id = document.getElementById('appId').value;
-            const nameInput = document.getElementById('appName');
-            // アプリ名をIDと同じにする（ただし空の場合は空のまま）
-            nameInput.value = id;
+            document.getElementById('appName').value = id;
         }
-
-        // 手動で名前を変更できないようにする（既に readonly だが念のため）
-        document.getElementById('appName').addEventListener('keydown', (e) => e.preventDefault());
 
         // ----- ユーティリティ -----
         const tokenInput = document.getElementById('token');
@@ -121,8 +159,21 @@
         const appSelect = document.getElementById('appSelect');
         const loadAppsBtn = document.getElementById('loadAppsBtn');
 
-        // ----- アプリ一覧取得＆セレクトボックス生成 -----
-        async function fetchAppList() {
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+
+        // ----- プログレス表示 -----
+        function showProgress(percent) {
+            progressBar.style.display = 'block';
+            progressFill.style.width = percent + '%';
+        }
+        function hideProgress() {
+            progressBar.style.display = 'none';
+            progressFill.style.width = '0%';
+        }
+
+        // ----- アプリ一覧取得（キャッシュ無視） -----
+        async function fetchAppList(force = false) {
             const token = tokenInput.value;
             const repo = repoInput.value;
             const branch = branchInput.value;
@@ -136,7 +187,8 @@
             try {
                 const owner = repo.split('/')[0];
                 const repoName = repo.split('/')[1];
-                const url = `https://api.github.com/repos/${owner}/${repoName}/contents/apps.json?ref=${branch}`;
+                // ★ キャッシュ無視のためにタイムスタンプを付与
+                const url = `https://api.github.com/repos/${owner}/${repoName}/contents/apps.json?ref=${branch}&t=${Date.now()}`;
                 const res = await fetch(url, {
                     headers: { 'Authorization': `token ${token}` }
                 });
@@ -144,19 +196,14 @@
                 if (!res.ok) throw new Error('apps.json の取得に失敗しました (HTTP ' + res.status + ')');
 
                 const data = await res.json();
-                const binaryString = atob(data.content);
-const bytes = new Uint8Array(binaryString.length);
-for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-}
-const content = new TextDecoder('utf-8').decode(bytes);
-const json = JSON.parse(content);
+                const content = base64ToUtf8(data.content);
+                const json = JSON.parse(content);
 
                 if (!json.apps || json.apps.length === 0) {
                     loadStatusDiv.innerText = '📭 アプリが一つも登録されていません。';
                     loadStatusDiv.className = 'status';
                     appSelect.style.display = 'none';
-                    return;
+                    return json;
                 }
 
                 // セレクトボックスを生成
@@ -169,60 +216,122 @@ const json = JSON.parse(content);
                 });
                 appSelect.style.display = 'block';
                 loadStatusDiv.innerText = `✅ ${json.apps.length} 件のアプリを読み込みました。`;
-                loadStatusDiv.className = 'status';
+                loadStatusDiv.className = 'status success';
 
-                // 選択イベントを付与
+                // 選択イベント
                 appSelect.onchange = function() {
                     const selectedId = this.value;
                     if (!selectedId) return;
                     const app = json.apps.find(a => a.id === selectedId);
                     if (!app) return;
-                    // フォームに反映（IDと名前は同じ値でセット）
                     appIdInput.value = app.id;
-                    appNameInput.value = app.id;  // ★ 強制的にIDと同じにする
+                    appNameInput.value = app.id;
                     appDescInput.value = app.description || '';
                     appVersionInput.value = app.version;
-                    // ファイル入力はクリア
                     iconFileInput.value = '';
                     indexFileInput.value = '';
-                    statusDiv.innerText = `📝 アプリ「${app.name}」の情報を読み込みました。必要に応じてファイルを選択し、「アップロード」を押してください。`;
+                    statusDiv.innerText = `📝 アプリ「${app.name}」の情報を読み込みました。`;
                     statusDiv.className = 'status';
                 };
 
-                // 現在選択中のアイテムがあれば、自動で反映
                 if (appSelect.value) {
                     appSelect.dispatchEvent(new Event('change'));
                 }
+
+                return json;
 
             } catch (err) {
                 loadStatusDiv.innerText = '❌ エラー: ' + err.message;
                 loadStatusDiv.className = 'status error';
                 console.error(err);
+                return null;
             }
         }
 
-        loadAppsBtn.addEventListener('click', fetchAppList);
+        loadAppsBtn.addEventListener('click', () => fetchAppList(true));
 
-        // ----- アップロード処理（ID＝名前強制） -----
+        // ----- ファイルアップロード（リトライ付き） -----
+        async function uploadFileWithRetry(apiBase, path, content, message, token, branch, maxRetries = 3) {
+            let lastError = null;
+            
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    // ★★★ 毎回最新のSHAを取得（409回避） ★★★
+                    let fileSha = null;
+                    try {
+                        const res = await fetch(`${apiBase}/${path}?ref=${branch}&t=${Date.now()}`, {
+                            headers: { 'Authorization': `token ${token}` }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            fileSha = data.sha;
+                        }
+                    } catch(e) {}
+
+                    const body = {
+                        message: message,
+                        content: content,
+                        branch: branch,
+                        sha: fileSha || undefined
+                    };
+                    
+                    const res = await fetch(`${apiBase}/${path}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+
+                    if (res.ok) {
+                        return await res.json();
+                    }
+                    
+                    if (res.status === 409) {
+                        // 競合エラー → リトライ
+                        console.warn(`[${attempt}/${maxRetries}] 競合発生、リトライ中...`);
+                        await new Promise(r => setTimeout(r, 500 * attempt));
+                        continue;
+                    }
+                    
+                    throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+                    
+                } catch (err) {
+                    lastError = err;
+                    if (attempt < maxRetries) {
+                        await new Promise(r => setTimeout(r, 500 * attempt));
+                    }
+                }
+            }
+            
+            throw new Error(`アップロード失敗 (${maxRetries}回): ${lastError?.message}`);
+        }
+
+        // ----- アップロード処理 -----
         document.getElementById('uploadBtn').addEventListener('click', async () => {
             const token = tokenInput.value;
             const repo = repoInput.value;
             const branch = branchInput.value;
             const appId = appIdInput.value.trim();
-            const appName = appNameInput.value.trim();  // ← IDと同じ値が入っている
+            const appName = appNameInput.value.trim();
             const appDesc = appDescInput.value.trim();
             const appVersion = appVersionInput.value.trim();
             const iconFile = iconFileInput.files[0];
             const indexFile = indexFileInput.files[0];
 
-            // 必須項目チェック（ファイルは任意）
             if (!token || !repo || !appId) {
                 statusDiv.innerText = '⚠️ トークン、リポジトリ、アプリIDは必須です。';
                 statusDiv.className = 'status error';
                 return;
             }
 
-            // ★ 念のため：名前がIDと異なる場合は強制的に合わせる
+            if (!/^[a-zA-Z0-9_-]+$/.test(appId)) {
+                statusDiv.innerText = '⚠️ アプリIDは英数字・ハイフン・アンダースコアのみ使用できます。';
+                statusDiv.className = 'status error';
+                return;
+            }
+
             if (appName !== appId) {
                 appNameInput.value = appId;
                 statusDiv.innerText = '⚠️ アプリ名をアプリIDに合わせました。';
@@ -230,36 +339,55 @@ const json = JSON.parse(content);
                 return;
             }
 
+            // index.html チェック（初回登録時は必須）
+            try {
+                const owner = repo.split('/')[0];
+                const repoName = repo.split('/')[1];
+                const testUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/apps/${appId}/index.html?ref=${branch}`;
+                const testRes = await fetch(testUrl, { headers: { 'Authorization': `token ${token}` } });
+                if (!testRes.ok && !indexFile) {
+                    // 初回登録時は index.html が必須
+                    if (testRes.status === 404) {
+                        statusDiv.innerText = '⚠️ 新規アプリ登録には index.html が必須です。';
+                        statusDiv.className = 'status error';
+                        return;
+                    }
+                }
+            } catch(e) {}
+
             statusDiv.innerText = '⏳ 処理中...';
             statusDiv.className = 'status';
+            showProgress(10);
 
             try {
                 const owner = repo.split('/')[0];
                 const repoName = repo.split('/')[1];
                 const apiBase = `https://api.github.com/repos/${owner}/${repoName}/contents`;
 
-                // 1. apps.json を取得
+                // 1. apps.json を取得（最新を強制取得）
+                showProgress(15);
                 let currentAppsJson = { apps: [] };
-                let sha = null;
+                let jsonSha = null;
                 try {
-                    const res = await fetch(`${apiBase}/apps.json?ref=${branch}`, {
+                    const res = await fetch(`${apiBase}/apps.json?ref=${branch}&t=${Date.now()}`, {
                         headers: { 'Authorization': `token ${token}` }
                     });
                     if (res.ok) {
                         const data = await res.json();
-                        const content = atob(data.content);
+                        const content = base64ToUtf8(data.content);
                         currentAppsJson = JSON.parse(content);
-                        sha = data.sha;
+                        jsonSha = data.sha;
                     } else if (res.status !== 404) {
-                        throw new Error('apps.json 取得エラー');
+                        throw new Error('apps.json 取得エラー: ' + res.status);
                     }
                 } catch(e) {}
 
-                // 2. アプリ情報を更新/追加（ID＝名前）
+                // 2. アプリ情報を更新/追加
+                showProgress(25);
                 const appIndex = currentAppsJson.apps.findIndex(a => a.id === appId);
                 const appEntry = {
                     id: appId,
-                    name: appId,  // ★★★ 強制的にIDと同じ名前 ★★★
+                    name: appId,
                     description: appDesc || '',
                     version: appVersion,
                     icon: `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/apps/${appId}/icon.png`,
@@ -272,7 +400,7 @@ const json = JSON.parse(content);
                     currentAppsJson.apps.push(appEntry);
                 }
 
-                // 3. ファイルアップロード（選択されているものだけ）
+                // 3. ファイルアップロード
                 const readFileAsBase64 = (file) => {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
@@ -282,71 +410,85 @@ const json = JSON.parse(content);
                     });
                 };
 
-                const uploadFile = async (path, content, message) => {
-                    let fileSha = null;
-                    try {
-                        const res = await fetch(`${apiBase}/${path}?ref=${branch}`, {
-                            headers: { 'Authorization': `token ${token}` }
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            fileSha = data.sha;
-                        }
-                    } catch(e) {}
-                    const body = {
-                        message: message,
-                        content: content,
-                        branch: branch,
-                        sha: fileSha || undefined
-                    };
-                    const res = await fetch(`${apiBase}/${path}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `token ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(body)
-                    });
-                    if (!res.ok) throw new Error(`ファイル ${path} のアップロードに失敗 (HTTP ${res.status})`);
-                };
-
-                // アイコンファイルが選択されていればアップロード
+                // ★★★ アイコン処理（ファイルがなければダミーを生成） ★★★
+                let iconBase64;
                 if (iconFile) {
-                    const iconBase64 = await readFileAsBase64(iconFile);
-                    await uploadFile(`apps/${appId}/icon.png`, iconBase64, `Add/update icon for ${appId}`);
+                    iconBase64 = await readFileAsBase64(iconFile);
+                } else {
+                    // ダミーアイコンを生成（白PNG）
+                    iconBase64 = generateDummyIcon();
+                    statusDiv.innerText = '⏳ ダミーアイコンを生成しました。';
                 }
+                showProgress(40);
+                await uploadFileWithRetry(
+                    apiBase, 
+                    `apps/${appId}/icon.png`, 
+                    iconBase64, 
+                    `Add/update icon for ${appId}`,
+                    token, branch
+                );
+                showProgress(60);
 
-                // index.html が選択されていればアップロード
+                // ★★★ index.html（必須） ★★★
                 if (indexFile) {
                     const indexBase64 = await readFileAsBase64(indexFile);
-                    await uploadFile(`apps/${appId}/index.html`, indexBase64, `Add/update index.html for ${appId}`);
+                    await uploadFileWithRetry(
+                        apiBase,
+                        `apps/${appId}/index.html`,
+                        indexBase64,
+                        `Add/update index.html for ${appId}`,
+                        token, branch
+                    );
+                } else {
+                    // 既存のindex.htmlを確認（なければエラー）
+                    try {
+                        const testRes = await fetch(`${apiBase}/apps/${appId}/index.html?ref=${branch}`, {
+                            headers: { 'Authorization': `token ${token}` }
+                        });
+                        if (!testRes.ok) {
+                            throw new Error('index.htmlが存在しません。ファイルを選択してください。');
+                        }
+                    } catch(e) {
+                        throw new Error('index.htmlが存在しません。ファイルを選択してください。');
+                    }
                 }
+                showProgress(80);
 
-                // 4. apps.json を更新（常に更新）
+                // 4. apps.json を更新
                 const updatedJson = JSON.stringify(currentAppsJson, null, 2);
-                // UTF-8 → Base64 に正しく変換
-const encoder = new TextEncoder();
-const data = encoder.encode(updatedJson);
-const jsonBase64 = btoa(String.fromCharCode(...data));
-                await uploadFile('apps.json', jsonBase64, `Update apps.json for ${appId}`);
+                const jsonBase64 = utf8ToBase64(updatedJson);
+                
+                await uploadFileWithRetry(
+                    apiBase,
+                    'apps.json',
+                    jsonBase64,
+                    `Update apps.json for ${appId}`,
+                    token, branch
+                );
+                showProgress(95);
 
                 statusDiv.innerText = `✅ アプリ "${appId}" をアップロードしました！（ID＝名前＝フォルダ名）`;
-                statusDiv.className = 'status';
+                statusDiv.className = 'status success';
 
-                // アップロード成功後、アプリ一覧を再読み込み
-                await fetchAppList();
-                // 選択をリセット
+                // アップロード成功後、アプリ一覧を再読み込み（強制）
+                await fetchAppList(true);
                 appSelect.value = '';
+                
+                // ★★★ 新しく追加されたアプリを表示するためにJSONを再表示 ★★★
+                await showJson();
+
+                hideProgress();
 
             } catch (err) {
                 statusDiv.innerText = `❌ エラー: ${err.message}`;
                 statusDiv.className = 'status error';
                 console.error(err);
+                hideProgress();
             }
         });
 
-        // ----- JSON表示（確認用） -----
-        document.getElementById('listBtn').addEventListener('click', async () => {
+        // ----- JSON表示（キャッシュ無視） -----
+        async function showJson() {
             const token = tokenInput.value;
             const repo = repoInput.value;
             const branch = branchInput.value;
@@ -358,28 +500,33 @@ const jsonBase64 = btoa(String.fromCharCode(...data));
             try {
                 const owner = repo.split('/')[0];
                 const repoName = repo.split('/')[1];
-                const res = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/apps.json?ref=${branch}`, {
+                // ★ キャッシュ無視
+                const res = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/apps.json?ref=${branch}&t=${Date.now()}`, {
                     headers: { 'Authorization': `token ${token}` }
                 });
-                if (!res.ok) throw new Error('取得失敗');
+                if (!res.ok) throw new Error('取得失敗: ' + res.status);
                 const data = await res.json();
-const binaryString = atob(data.content);
-const bytes = new Uint8Array(binaryString.length);
-for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-}
-const content = new TextDecoder('utf-8').decode(bytes);
-const json = JSON.parse(content);
-
+                const content = base64ToUtf8(data.content);
+                const json = JSON.parse(content);
                 pre.innerText = JSON.stringify(json, null, 2);
             } catch(e) {
                 pre.innerText = 'エラー: ' + e.message;
             }
-        });
+        }
 
-        // 初期化：アプリ名欄にIDを自動反映
+        document.getElementById('listBtn').addEventListener('click', showJson);
+
+        // 初期化
         document.addEventListener('DOMContentLoaded', () => {
             syncName();
+            // トークンが保存されていれば自動読み込み
+            const savedToken = localStorage.getItem('paaos_store_token');
+            if (savedToken) {
+                tokenInput.value = savedToken;
+            }
+            tokenInput.addEventListener('change', () => {
+                localStorage.setItem('paaos_store_token', tokenInput.value);
+            });
         });
     </script>
 </body>
