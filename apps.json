@@ -13,18 +13,6 @@
       ]
     },
     {
-      "id": "PaaOSé»å",
-      "name": "PaaOSé»å",
-      "description": "é»åã å¶ä½è:Paa",
-      "version": "1.0.0",
-      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/PaaOSé»å/icon.png",
-      "basePath": "apps/PaaOSé»å/",
-      "files": [
-        "index.html",
-        "icon.png"
-      ]
-    },
-    {
       "id": "PaaOS",
       "name": "PaaOS",
       "description": "電卓。 制作者:Paa",
