@@ -131,6 +131,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "paaclock",
+      "name": "paaclock",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paaclock/icon.png",
+      "basePath": "apps/paaclock/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
