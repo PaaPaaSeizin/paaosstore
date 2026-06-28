@@ -15,7 +15,7 @@
     {
       "id": "paa.calculator",
       "name": "paa.calculator",
-      "description": "ÃÂ©ÃÂÃÂ»ÃÂ¥ÃÂÃÂÃÂ£ÃÂÃÂ ÃÂ¥ÃÂÃÂ¶ÃÂ¤ÃÂ½ÃÂÃÂ¨ÃÂÃÂ:Paa",
+      "description": "ÃÂÃÂ©ÃÂÃÂÃÂÃÂ»ÃÂÃÂ¥ÃÂÃÂÃÂÃÂÃÂÃÂ£ÃÂÃÂÃÂÃÂ ÃÂÃÂ¥ÃÂÃÂÃÂÃÂ¶ÃÂÃÂ¤ÃÂÃÂ½ÃÂÃÂÃÂÃÂ¨ÃÂÃÂÃÂÃÂ:Paa",
       "version": "1.0.0",
       "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paa.calculator/icon.png",
       "basePath": "apps/paa.calculator/",
@@ -25,12 +25,12 @@
       ]
     },
     {
-      "id": "Ã£ÂÂ¡Ã£ÂÂÃ£ÂÂ¡Ã£ÂÂ",
-      "name": "Ã£ÂÂ¡Ã£ÂÂÃ£ÂÂ¡Ã£ÂÂ",
-      "description": "Ã£ÂÂÃ£ÂÂ¤Ã£ÂÂ³Ã£ÂÂ",
+      "id": "ÃÂ£ÃÂÃÂ¡ÃÂ£ÃÂÃÂÃÂ£ÃÂÃÂ¡ÃÂ£ÃÂÃÂ",
+      "name": "ÃÂ£ÃÂÃÂ¡ÃÂ£ÃÂÃÂÃÂ£ÃÂÃÂ¡ÃÂ£ÃÂÃÂ",
+      "description": "ÃÂ£ÃÂÃÂÃÂ£ÃÂÃÂ¤ÃÂ£ÃÂÃÂ³ÃÂ£ÃÂÃÂ",
       "version": "1.0.0",
-      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/Ã£ÂÂ¡Ã£ÂÂÃ£ÂÂ¡Ã£ÂÂ/icon.png",
-      "basePath": "apps/Ã£ÂÂ¡Ã£ÂÂÃ£ÂÂ¡Ã£ÂÂ/",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/ÃÂ£ÃÂÃÂ¡ÃÂ£ÃÂÃÂÃÂ£ÃÂÃÂ¡ÃÂ£ÃÂÃÂ/icon.png",
+      "basePath": "apps/ÃÂ£ÃÂÃÂ¡ÃÂ£ÃÂÃÂÃÂ£ÃÂÃÂ¡ÃÂ£ÃÂÃÂ/",
       "files": [
         "index.html",
         "icon.png"
@@ -43,6 +43,18 @@
       "version": "1.0.1",
       "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/calc/icon.png",
       "basePath": "apps/calc/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
+    },
+    {
+      "id": "paacalc",
+      "name": "paacalc",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paacalc/icon.png",
+      "basePath": "apps/paacalc/",
       "files": [
         "index.html",
         "icon.png"
