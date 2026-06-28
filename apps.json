@@ -13,12 +13,24 @@
       ]
     },
     {
-      "id": "電卓",
-      "name": "電卓",
-      "description": "制作者:Paa",
+      "id": "é»å",
+      "name": "é»å",
+      "description": "å¶ä½è:Paa",
       "version": "1.0.0",
       "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paa.calculator/icon.png",
       "basePath": "apps/paa.calculator/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
+    },
+    {
+      "id": "PaaOS電卓",
+      "name": "PaaOS電卓",
+      "description": "電卓。 制作者:Paa",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/PaaOS電卓/icon.png",
+      "basePath": "apps/PaaOS電卓/",
       "files": [
         "index.html",
         "icon.png"
