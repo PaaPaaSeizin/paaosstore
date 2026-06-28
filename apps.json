@@ -143,6 +143,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "paapassword",
+      "name": "paapassword",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paapassword/icon.png",
+      "basePath": "apps/paapassword/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
