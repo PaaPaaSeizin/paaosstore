@@ -59,6 +59,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "paanotes",
+      "name": "paanotes",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paanotes/icon.png",
+      "basePath": "apps/paanotes/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
