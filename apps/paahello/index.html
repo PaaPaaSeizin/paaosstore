@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World</title>
+    <style>
+        body { font-family: sans-serif; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #fff; }
+        .container { text-align: center; }
+        h1 { font-size: 48px; font-weight: 200; letter-spacing: 4px; background: linear-gradient(135deg, #f7971e, #ffd200); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sub { font-size: 18px; opacity: 0.6; margin-top: 8px; }
+        .btn { padding: 12px 32px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 40px; color: #fff; cursor: pointer; margin-top: 24px; font-size: 14px; }
+        .btn:active { background: rgba(255,255,255,0.2); }
+        .msg { margin-top: 16px; font-size: 14px; opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👋 Hello World</h1>
+        <div class="sub">PaaOS サンプルアプリ</div>
+        <button class="btn" onclick="greet()">🎉 押してみる</button>
+        <div class="msg" id="msg"></div>
+    </div>
+    <script>
+        const msgs = ['こんにちは！', 'Hello!', 'Hola!', 'Bonjour!', 'こんばんは！', 'おはよう！', 'Happy!', 'PaaOS!'];
+        function greet() {
+            const msg = msgs[Math.floor(Math.random() * msgs.length)];
+            document.getElementById('msg').textContent = msg;
+        }
+    </script>
+</body>
+</html>
