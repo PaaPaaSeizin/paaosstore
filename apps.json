@@ -95,6 +95,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "paacounter",
+      "name": "paacounter",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/paacounter/icon.png",
+      "basePath": "apps/paacounter/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
