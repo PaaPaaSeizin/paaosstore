@@ -10,6 +10,7 @@
         input, textarea, button, select { display: block; width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
         button { background: #0078d4; color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { opacity: 0.8; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         .status { padding: 10px; background: #e8f0fe; border-radius: 8px; }
         .status.error { background: #fce8e8; color: #c00; }
         .status.success { background: #e8f5e9; color: #2e7d32; }
@@ -325,7 +326,9 @@
                             const data = await res.json();
                             fileSha = data.sha;
                         }
-                    } catch(e) {}
+                    } catch(e) {
+                        // ファイルが存在しない場合は無視
+                    }
 
                     const body = {
                         message: message,
@@ -354,10 +357,13 @@
                         continue;
                     }
                     
-                    throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+                    // その他のHTTPエラー
+                    const errorText = await res.text();
+                    throw new Error(`HTTP ${res.status}: ${errorText}`);
                     
                 } catch (err) {
                     lastError = err;
+                    console.warn(`[${attempt}/${maxRetries}] エラー: ${err.message}`);
                     if (attempt < maxRetries) {
                         await new Promise(r => setTimeout(r, 500 * attempt));
                     }
@@ -589,7 +595,7 @@
         });
 
         // ============================================================
-        // 新規追加: アップデート管理機能
+        // 新規追加: アップデート管理機能（修正版）
         // ============================================================
 
         // 要素取得
@@ -635,99 +641,98 @@
             });
         }
 
-        // アップロード実行
+        // アップロード実行（修正版）
         uploadUpdateBtn.addEventListener('click', async () => {
-            const token = tokenInput.value;
-            const repo = repoInput.value;
-            const branch = branchInput.value;
-            const version = updateVersion.value.trim();
-            const description = updateDescription.value.trim();
-            const filename = updateFilename.value.trim();
+            // ボタンを無効化（多重クリック防止）
+            uploadUpdateBtn.disabled = true;
+            updateStatus.innerText = '⏳ 処理開始...';
+            updateStatus.className = 'status';
 
-            if (!token || !repo) {
-                updateStatus.innerText = '⚠️ トークンとリポジトリを設定してください。';
-                updateStatus.className = 'status error';
-                return;
-            }
-            if (!version) {
-                updateStatus.innerText = '⚠️ バージョンを入力してください。';
-                updateStatus.className = 'status error';
-                return;
-            }
-            if (!filename) {
-                updateStatus.innerText = '⚠️ ファイル名を入力してください。';
-                updateStatus.className = 'status error';
-                return;
-            }
-            // ファイル名が .zip で終わっているかチェック
-            if (!filename.toLowerCase().endsWith('.zip')) {
-                updateStatus.innerText = '⚠️ ファイル名は .zip で終わる必要があります。';
-                updateStatus.className = 'status error';
-                return;
-            }
+            try {
+                const token = tokenInput.value;
+                const repo = repoInput.value;
+                const branch = branchInput.value;
+                const version = updateVersion.value.trim();
+                const description = updateDescription.value.trim();
+                const filename = updateFilename.value.trim();
 
-            const owner = repo.split('/')[0];
-            const repoName = repo.split('/')[1];
-            const apiBase = `https://api.github.com/repos/${owner}/${repoName}/contents`;
-
-            // 1. どの方法でZIPを用意するか
-            let zipBlob = null;
-            if (updateZipFile.files.length > 0) {
-                // 直接ZIPアップロード
-                const file = updateZipFile.files[0];
-                if (!file.name.toLowerCase().endsWith('.zip')) {
-                    updateStatus.innerText = '⚠️ アップロードされたファイルはZIPではありません。';
+                if (!token || !repo) {
+                    updateStatus.innerHTML = '⚠️ トークンとリポジトリを設定してください。';
                     updateStatus.className = 'status error';
                     return;
                 }
-                zipBlob = file;
-                updateStatus.innerText = '⏳ アップロードされたZIPを使用します...';
-            } else if (updateOsHtml.files.length > 0) {
-                // os.html と info.txt からZIPを生成
-                const osHtmlFile = updateOsHtml.files[0];
-                let infoTxtContent = '';
-                if (updateInfoTxt.files.length > 0) {
-                    // info.txt ファイルがアップロードされた
-                    const txtFile = updateInfoTxt.files[0];
-                    infoTxtContent = await txtFile.text();
+                if (!version) {
+                    updateStatus.innerHTML = '⚠️ バージョンを入力してください。';
+                    updateStatus.className = 'status error';
+                    return;
+                }
+                if (!filename) {
+                    updateStatus.innerHTML = '⚠️ ファイル名を入力してください。';
+                    updateStatus.className = 'status error';
+                    return;
+                }
+                if (!filename.toLowerCase().endsWith('.zip')) {
+                    updateStatus.innerHTML = '⚠️ ファイル名は .zip で終わる必要があります。';
+                    updateStatus.className = 'status error';
+                    return;
+                }
+
+                const owner = repo.split('/')[0];
+                const repoName = repo.split('/')[1];
+                const apiBase = `https://api.github.com/repos/${owner}/${repoName}/contents`;
+
+                // 1. どの方法でZIPを用意するか
+                let zipBlob = null;
+                if (updateZipFile.files.length > 0) {
+                    const file = updateZipFile.files[0];
+                    if (!file.name.toLowerCase().endsWith('.zip')) {
+                        updateStatus.innerHTML = '⚠️ アップロードされたファイルはZIPではありません。';
+                        updateStatus.className = 'status error';
+                        return;
+                    }
+                    zipBlob = file;
+                    updateStatus.innerText = '⏳ アップロードされたZIPを使用します...';
+                } else if (updateOsHtml.files.length > 0) {
+                    const osHtmlFile = updateOsHtml.files[0];
+                    let infoTxtContent = '';
+                    if (updateInfoTxt.files.length > 0) {
+                        const txtFile = updateInfoTxt.files[0];
+                        infoTxtContent = await txtFile.text();
+                    } else {
+                        infoTxtContent = updateInfoText.value;
+                    }
+
+                    const zip = new JSZip();
+                    zip.file('os.html', await osHtmlFile.text());
+                    if (infoTxtContent) {
+                        zip.file('info.txt', infoTxtContent);
+                    }
+                    zipBlob = await zip.generateAsync({ type: 'blob' });
+                    updateStatus.innerText = '⏳ ZIPを生成しました...';
                 } else {
-                    // テキストエリアの内容を使用
-                    infoTxtContent = updateInfoText.value;
+                    updateStatus.innerHTML = '⚠️ ZIPファイルをアップロードするか、os.htmlを選択してください。';
+                    updateStatus.className = 'status error';
+                    return;
                 }
 
-                // ZIPを生成
-                const zip = new JSZip();
-                zip.file('os.html', await osHtmlFile.text());
-                if (infoTxtContent) {
-                    zip.file('info.txt', infoTxtContent);
-                }
-                zipBlob = await zip.generateAsync({ type: 'blob' });
-                updateStatus.innerText = '⏳ ZIPを生成しました...';
-            } else {
-                updateStatus.innerText = '⚠️ ZIPファイルをアップロードするか、os.htmlを選択してください。';
-                updateStatus.className = 'status error';
-                return;
-            }
+                // 2. UPINFO.json の内容を作成
+                const upinfo = {
+                    version: version,
+                    filename: filename,
+                    description: description || ''
+                };
+                const upinfoJson = JSON.stringify(upinfo, null, 2);
+                const upinfoBase64 = utf8ToBase64(upinfoJson);
 
-            // 2. UPINFO.json の内容を作成
-            const upinfo = {
-                version: version,
-                filename: filename,
-                description: description || ''
-            };
-            const upinfoJson = JSON.stringify(upinfo, null, 2);
-            const upinfoBase64 = utf8ToBase64(upinfoJson);
+                // 3. ZIPをBase64に変換
+                const zipArrayBuffer = await readFileAsArrayBuffer(zipBlob);
+                const zipBase64 = btoa(String.fromCharCode(...new Uint8Array(zipArrayBuffer)));
 
-            // 3. ZIPをBase64に変換
-            const zipArrayBuffer = await readFileAsArrayBuffer(zipBlob);
-            const zipBase64 = btoa(String.fromCharCode(...new Uint8Array(zipArrayBuffer)));
+                // 4. アップロード開始
+                updateStatus.innerText = '⏳ アップロード中...';
+                updateStatus.className = 'status';
+                showUpdateProgress(10);
 
-            // 4. アップロード開始
-            updateStatus.innerText = '⏳ アップロード中...';
-            updateStatus.className = 'status';
-            showUpdateProgress(10);
-
-            try {
                 // UPINFO.json をアップロード
                 showUpdateProgress(20);
                 await uploadFileWithRetry(
@@ -749,7 +754,7 @@
                 );
                 showUpdateProgress(90);
 
-                updateStatus.innerText = `✅ アップデートをアップロードしました！\nバージョン: ${version}\nファイル: ${filename}`;
+                updateStatus.innerHTML = `✅ アップデートをアップロードしました！<br>バージョン: ${version}<br>ファイル: ${filename}`;
                 updateStatus.className = 'status success';
                 hideUpdateProgress();
 
@@ -759,10 +764,13 @@
                 updateInfoTxt.value = '';
 
             } catch (err) {
-                updateStatus.innerText = `❌ エラー: ${err.message}`;
+                updateStatus.innerHTML = `❌ エラー: ${err.message}`;
                 updateStatus.className = 'status error';
                 console.error(err);
                 hideUpdateProgress();
+            } finally {
+                // ボタンを再有効化
+                uploadUpdateBtn.disabled = false;
             }
         });
     </script>
