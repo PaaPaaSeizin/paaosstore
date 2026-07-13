@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>PaaOS App Store Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -20,6 +21,10 @@
         .char-counter { font-size: 12px; color: #888; text-align: right; margin-top: -4px; }
         .progress-bar { width: 100%; height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; margin: 8px 0; display: none; }
         .progress-bar .fill { height: 100%; background: #4CAF50; width: 0%; transition: width 0.3s; }
+        hr { border: none; border-top: 1px solid #ddd; margin: 16px 0; }
+        .inline-flex { display: flex; gap: 10px; align-items: center; }
+        .inline-flex > * { flex: 1; }
+        .inline-flex > button { flex: 0 0 auto; width: auto; }
     </style>
 </head>
 <body>
@@ -95,6 +100,60 @@
         <h2>現在の apps.json（確認用）</h2>
         <button id="listBtn">🔄 JSONを最新表示</button>
         <pre id="appList" style="background:#eee; padding:10px; border-radius:8px; max-height:300px; overflow:auto;"></pre>
+    </div>
+
+    <!-- ===== 新規追加: アップデート管理カード ===== -->
+    <div class="card">
+        <h2>🔄 アップデート管理</h2>
+        <p>バージョン管理と更新ファイル（UP_*.zip）をアップロードします。</p>
+        <div class="warning">
+            ⚠️ アップデートファイルはリポジトリのルートに配置されます。<br>
+            UPINFO.json と ZIP ファイルがアップロードされます。
+        </div>
+
+        <label>バージョン（例: 2.4） <span style="color:#c00;">*</span></label>
+        <input type="text" id="updateVersion" placeholder="例: 2.4" required>
+
+        <label>説明（日本語OK）</label>
+        <input type="text" id="updateDescription" placeholder="更新内容の説明">
+
+        <label>ファイル名（例: UP_2.4.zip） <span style="color:#c00;">*</span></label>
+        <input type="text" id="updateFilename" placeholder="例: UP_2.4.zip" required>
+        <div class="char-counter">ファイル名は「UP_バージョン.zip」形式を推奨</div>
+
+        <hr style="margin:16px 0;">
+
+        <div style="margin-bottom:8px;">
+            <strong>ZIPファイルを直接アップロード</strong>
+            <input type="file" id="updateZipFile" accept=".zip">
+            <div class="file-note">既にZIPファイルがある場合はこちらを選択</div>
+        </div>
+
+        <div style="margin:16px 0; text-align:center; font-weight:bold;">— または —</div>
+
+        <div>
+            <strong>os.html と info.txt からZIPを生成</strong>
+            <div style="margin-top:8px;">
+                <label>os.html ファイル</label>
+                <input type="file" id="updateOsHtml" accept=".html">
+                <div class="file-note">必須：os.html ファイルを選択</div>
+            </div>
+            <div style="margin-top:8px;">
+                <label>info.txt ファイル（任意）</label>
+                <input type="file" id="updateInfoTxt" accept=".txt">
+                <div class="file-note">または下記テキストエリアに入力</div>
+            </div>
+            <div style="margin-top:8px;">
+                <label>info.txt の内容（任意：ファイルが優先）</label>
+                <textarea id="updateInfoText" rows="4" placeholder="システム情報を記述（例：OS名=PaaOS Future）"></textarea>
+                <div class="file-note">ファイルを選択しなかった場合、この内容が info.txt として使用されます</div>
+            </div>
+        </div>
+
+        <div class="progress-bar" id="updateProgressBar"><div class="fill" id="updateProgressFill"></div></div>
+
+        <button id="uploadUpdateBtn">📤 アップデートをアップロード</button>
+        <div id="updateStatus" class="status">準備完了</div>
     </div>
 
     <script>
@@ -527,6 +586,184 @@
             tokenInput.addEventListener('change', () => {
                 localStorage.setItem('paaos_store_token', tokenInput.value);
             });
+        });
+
+        // ============================================================
+        // 新規追加: アップデート管理機能
+        // ============================================================
+
+        // 要素取得
+        const updateVersion = document.getElementById('updateVersion');
+        const updateDescription = document.getElementById('updateDescription');
+        const updateFilename = document.getElementById('updateFilename');
+        const updateZipFile = document.getElementById('updateZipFile');
+        const updateOsHtml = document.getElementById('updateOsHtml');
+        const updateInfoTxt = document.getElementById('updateInfoTxt');
+        const updateInfoText = document.getElementById('updateInfoText');
+        const updateStatus = document.getElementById('updateStatus');
+        const updateProgressBar = document.getElementById('updateProgressBar');
+        const updateProgressFill = document.getElementById('updateProgressFill');
+        const uploadUpdateBtn = document.getElementById('uploadUpdateBtn');
+
+        // プログレス表示（アップデート用）
+        function showUpdateProgress(percent) {
+            updateProgressBar.style.display = 'block';
+            updateProgressFill.style.width = percent + '%';
+        }
+        function hideUpdateProgress() {
+            updateProgressBar.style.display = 'none';
+            updateProgressFill.style.width = '0%';
+        }
+
+        // ファイルをBase64で読み込む（汎用）
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ファイルをArrayBufferで読み込む（ZIP用）
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // アップロード実行
+        uploadUpdateBtn.addEventListener('click', async () => {
+            const token = tokenInput.value;
+            const repo = repoInput.value;
+            const branch = branchInput.value;
+            const version = updateVersion.value.trim();
+            const description = updateDescription.value.trim();
+            const filename = updateFilename.value.trim();
+
+            if (!token || !repo) {
+                updateStatus.innerText = '⚠️ トークンとリポジトリを設定してください。';
+                updateStatus.className = 'status error';
+                return;
+            }
+            if (!version) {
+                updateStatus.innerText = '⚠️ バージョンを入力してください。';
+                updateStatus.className = 'status error';
+                return;
+            }
+            if (!filename) {
+                updateStatus.innerText = '⚠️ ファイル名を入力してください。';
+                updateStatus.className = 'status error';
+                return;
+            }
+            // ファイル名が .zip で終わっているかチェック
+            if (!filename.toLowerCase().endsWith('.zip')) {
+                updateStatus.innerText = '⚠️ ファイル名は .zip で終わる必要があります。';
+                updateStatus.className = 'status error';
+                return;
+            }
+
+            const owner = repo.split('/')[0];
+            const repoName = repo.split('/')[1];
+            const apiBase = `https://api.github.com/repos/${owner}/${repoName}/contents`;
+
+            // 1. どの方法でZIPを用意するか
+            let zipBlob = null;
+            if (updateZipFile.files.length > 0) {
+                // 直接ZIPアップロード
+                const file = updateZipFile.files[0];
+                if (!file.name.toLowerCase().endsWith('.zip')) {
+                    updateStatus.innerText = '⚠️ アップロードされたファイルはZIPではありません。';
+                    updateStatus.className = 'status error';
+                    return;
+                }
+                zipBlob = file;
+                updateStatus.innerText = '⏳ アップロードされたZIPを使用します...';
+            } else if (updateOsHtml.files.length > 0) {
+                // os.html と info.txt からZIPを生成
+                const osHtmlFile = updateOsHtml.files[0];
+                let infoTxtContent = '';
+                if (updateInfoTxt.files.length > 0) {
+                    // info.txt ファイルがアップロードされた
+                    const txtFile = updateInfoTxt.files[0];
+                    infoTxtContent = await txtFile.text();
+                } else {
+                    // テキストエリアの内容を使用
+                    infoTxtContent = updateInfoText.value;
+                }
+
+                // ZIPを生成
+                const zip = new JSZip();
+                zip.file('os.html', await osHtmlFile.text());
+                if (infoTxtContent) {
+                    zip.file('info.txt', infoTxtContent);
+                }
+                zipBlob = await zip.generateAsync({ type: 'blob' });
+                updateStatus.innerText = '⏳ ZIPを生成しました...';
+            } else {
+                updateStatus.innerText = '⚠️ ZIPファイルをアップロードするか、os.htmlを選択してください。';
+                updateStatus.className = 'status error';
+                return;
+            }
+
+            // 2. UPINFO.json の内容を作成
+            const upinfo = {
+                version: version,
+                filename: filename,
+                description: description || ''
+            };
+            const upinfoJson = JSON.stringify(upinfo, null, 2);
+            const upinfoBase64 = utf8ToBase64(upinfoJson);
+
+            // 3. ZIPをBase64に変換
+            const zipArrayBuffer = await readFileAsArrayBuffer(zipBlob);
+            const zipBase64 = btoa(String.fromCharCode(...new Uint8Array(zipArrayBuffer)));
+
+            // 4. アップロード開始
+            updateStatus.innerText = '⏳ アップロード中...';
+            updateStatus.className = 'status';
+            showUpdateProgress(10);
+
+            try {
+                // UPINFO.json をアップロード
+                showUpdateProgress(20);
+                await uploadFileWithRetry(
+                    apiBase,
+                    'UPINFO.json',
+                    upinfoBase64,
+                    `Update UPINFO.json (${version})`,
+                    token, branch
+                );
+                showUpdateProgress(50);
+
+                // ZIPファイルをアップロード
+                await uploadFileWithRetry(
+                    apiBase,
+                    filename,
+                    zipBase64,
+                    `Upload update package ${filename}`,
+                    token, branch
+                );
+                showUpdateProgress(90);
+
+                updateStatus.innerText = `✅ アップデートをアップロードしました！\nバージョン: ${version}\nファイル: ${filename}`;
+                updateStatus.className = 'status success';
+                hideUpdateProgress();
+
+                // クリア（オプション）
+                updateZipFile.value = '';
+                updateOsHtml.value = '';
+                updateInfoTxt.value = '';
+
+            } catch (err) {
+                updateStatus.innerText = `❌ エラー: ${err.message}`;
+                updateStatus.className = 'status error';
+                console.error(err);
+                hideUpdateProgress();
+            }
         });
     </script>
 </body>
