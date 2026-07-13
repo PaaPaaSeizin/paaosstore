@@ -295,7 +295,7 @@
                 };
 
                 if (appSelect.value) {
-    appSelect.dispatchEvent(new Event('change'));
+    setTimeout(() => appSelect.dispatchEvent(new Event('change')), 0);
 }
 
                 return json;
