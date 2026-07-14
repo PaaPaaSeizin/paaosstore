@@ -725,8 +725,7 @@
                 const upinfoBase64 = utf8ToBase64(upinfoJson);
 
                 // 3. ZIPをBase64に変換
-                const zipArrayBuffer = await readFileAsArrayBuffer(zipBlob);
-                const zipBase64 = btoa(String.fromCharCode(...new Uint8Array(zipArrayBuffer)));
+                const zipBase64 = await readFileAsBase64(zipBlob);
 
                 // 4. アップロード開始
                 updateStatus.innerText = '⏳ アップロード中...';
