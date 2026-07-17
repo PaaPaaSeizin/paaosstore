@@ -155,6 +155,25 @@
 
         <button id="uploadUpdateBtn">📤 アップデートをアップロード</button>
         <div id="updateStatus" class="status">準備完了</div>
+        
+    </div>
+        <!-- ===== 新規追加: システムアセット管理カード ===== -->
+    <div class="card">
+        <h2>🖼️ システムアセット管理</h2>
+        <p>リポジトリ直下に配置するシステムファイル（boot.*, shutdown.*, wallpaper.*）をアップロードします。</p>
+        <div class="warning">
+            ⚠️ ファイルはリポジトリのルートに直接アップロードされます。<br>
+            既存の同名ファイルは上書きされます。
+        </div>
+
+        <label>アップロードするファイル（複数選択可）</label>
+        <input type="file" id="systemAssetsInput" multiple>
+        <div class="file-note">対応ファイル: boot.*, shutdown.*, wallpaper.*（例: boot.gif, shutdown.png, wallpaper.html）</div>
+
+        <div class="progress-bar" id="systemAssetsProgressBar"><div class="fill" id="systemAssetsProgressFill"></div></div>
+
+        <button id="uploadSystemAssetsBtn">📤 システムアセットをアップロード</button>
+        <div id="systemAssetsStatus" class="status">準備完了</div>
     </div>
 
     <script>
@@ -610,6 +629,120 @@
         const updateProgressBar = document.getElementById('updateProgressBar');
         const updateProgressFill = document.getElementById('updateProgressFill');
         const uploadUpdateBtn = document.getElementById('uploadUpdateBtn');
+                // ============================================================
+        // 新規追加: システムアセット管理機能
+        // ============================================================
+
+        // 要素取得
+        const systemAssetsInput = document.getElementById('systemAssetsInput');
+        const systemAssetsStatus = document.getElementById('systemAssetsStatus');
+        const systemAssetsProgressBar = document.getElementById('systemAssetsProgressBar');
+        const systemAssetsProgressFill = document.getElementById('systemAssetsProgressFill');
+        const uploadSystemAssetsBtn = document.getElementById('uploadSystemAssetsBtn');
+
+        // システムアセットアップロード処理
+        uploadSystemAssetsBtn.addEventListener('click', async () => {
+            // ボタンを無効化（多重クリック防止）
+            uploadSystemAssetsBtn.disabled = true;
+            systemAssetsStatus.innerText = '⏳ 処理開始...';
+            systemAssetsStatus.className = 'status';
+
+            try {
+                const token = tokenInput.value;
+                const repo = repoInput.value;
+                const branch = branchInput.value;
+                const files = systemAssetsInput.files;
+
+                if (!token || !repo) {
+                    systemAssetsStatus.innerText = '⚠️ トークンとリポジトリを設定してください。';
+                    systemAssetsStatus.className = 'status error';
+                    return;
+                }
+                if (files.length === 0) {
+                    systemAssetsStatus.innerText = '⚠️ アップロードするファイルを選択してください。';
+                    systemAssetsStatus.className = 'status error';
+                    return;
+                }
+
+                // バリデーション：ファイル名が boot.*, shutdown.*, wallpaper.* で始まるか
+                const validPattern = /^(boot|shutdown|wallpaper)\./i;
+                const invalidFiles = [];
+                for (const file of files) {
+                    if (!validPattern.test(file.name)) {
+                        invalidFiles.push(file.name);
+                    }
+                }
+                if (invalidFiles.length > 0) {
+                    systemAssetsStatus.innerText = `⚠️ 以下のファイルは無効です（boot.*, shutdown.*, wallpaper.* のみ）: ${invalidFiles.join(', ')}`;
+                    systemAssetsStatus.className = 'status error';
+                    return;
+                }
+
+                const owner = repo.split('/')[0];
+                const repoName = repo.split('/')[1];
+                const apiBase = `https://api.github.com/repos/${owner}/${repoName}/contents`;
+
+                let successCount = 0;
+                let failCount = 0;
+                const total = files.length;
+
+                // プログレスバー表示
+                systemAssetsProgressBar.style.display = 'block';
+
+                for (let i = 0; i < total; i++) {
+                    const file = files[i];
+                    const fileName = file.name;
+                    try {
+                        // Base64エンコード（UTF-8対応）
+                        const base64 = await readFileAsBase64(file);
+                        const message = `Add/update system asset: ${fileName}`;
+
+                        // 進捗更新
+                        const percent = Math.round(((i + 1) / total) * 100);
+                        systemAssetsProgressFill.style.width = percent + '%';
+                        systemAssetsStatus.innerText = `⏳ アップロード中 (${i+1}/${total}): ${fileName}`;
+
+                        // アップロード実行（リトライ付き）
+                        await uploadFileWithRetry(
+                            apiBase,
+                            fileName,
+                            base64,
+                            message,
+                            token,
+                            branch
+                        );
+                        successCount++;
+                    } catch (err) {
+                        console.error(`ファイル ${fileName} のアップロードに失敗:`, err);
+                        failCount++;
+                        // エラーが発生しても続行（必要に応じて中断する場合は break を入れる）
+                    }
+                }
+
+                // プログレスバー非表示
+                systemAssetsProgressBar.style.display = 'none';
+
+                if (failCount === 0) {
+                    systemAssetsStatus.innerText = `✅ すべてのファイルをアップロードしました (${successCount} 個)`;
+                    systemAssetsStatus.className = 'status success';
+                } else {
+                    systemAssetsStatus.innerText = `⚠️ 一部失敗: ${successCount} 成功, ${failCount} 失敗`;
+                    systemAssetsStatus.className = 'status error';
+                }
+
+                // ファイル入力をクリア
+                systemAssetsInput.value = '';
+
+            } catch (err) {
+                systemAssetsStatus.innerText = `❌ エラー: ${err.message}`;
+                systemAssetsStatus.className = 'status error';
+                console.error(err);
+                systemAssetsProgressBar.style.display = 'none';
+            } finally {
+                // ボタンを再有効化
+                uploadSystemAssetsBtn.disabled = false;
+            }
+        });
 
         // プログレス表示（アップデート用）
         function showUpdateProgress(percent) {
