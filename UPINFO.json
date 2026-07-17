@@ -1,5 +1,5 @@
 {
-  "version": "PF.2.3.07.R",
-  "filename": "UP_PaaOS Future 2.3.zip",
-  "description": "・動作の安定化 ・オンラインアップデート機能の追加 ・動作アニメーションの改良 ・フォント切り替え機能の追加 ・絵文字切り替え機能の追加"
+  "version": "PF.2.4.03.R",
+  "filename": "UP_PaaOS Future 2.4.zip",
+  "description": "・ホームバーの操作安定化 ・カーネル動作のバグ修正"
 }
