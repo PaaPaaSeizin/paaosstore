@@ -107,6 +107,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "PaaOS-Guide",
+      "name": "PaaOS-Guide",
+      "description": "PaaOS 完全ガイド For Future 2.5",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/PaaOS-Guide/icon.png",
+      "basePath": "apps/PaaOS-Guide/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
