@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PaaOS ガイド</title>
+    <style>
+        :root {
+            --bg: #000;
+            --accent: #ff3e3e;
+            --text: #fff;
+            --win-bg: #fdfdfd;
+            --text-dark: #000;
+            --font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: var(--win-bg);
+            color: var(--text-dark);
+            font-family: var(--font-family);
+            padding: 16px 16px 30px;
+            line-height: 1.6;
+            overflow-y: auto;
+            height: 100vh;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(128,128,128,0.2);
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0;
+        }
+        .header .icon {
+            font-size: 28px;
+        }
+        .section {
+            background: rgba(128,128,128,0.06);
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(128,128,128,0.1);
+        }
+        .section h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .section h2 .arrow {
+            transition: transform 0.2s;
+            font-size: 14px;
+        }
+        .section h2 .arrow.open {
+            transform: rotate(90deg);
+        }
+        .section-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            max-height: 0;
+        }
+        .section-content.open {
+            max-height: 5000px;
+        }
+        .section-content p, .section-content li {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 6px;
+        }
+        .section-content ul {
+            padding-left: 20px;
+            margin-bottom: 8px;
+        }
+        .badge {
+            display: inline-block;
+            background: var(--accent);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+        .badge.dev {
+            background: #6c5ce7;
+        }
+        .badge.root {
+            background: #e17055;
+        }
+        .code {
+            background: rgba(0,0,0,0.07);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .note {
+            background: rgba(255, 200, 0, 0.12);
+            border-left: 3px solid #fdcb6e;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+        .note.warn {
+            border-left-color: #e17055;
+            background: rgba(225, 112, 85, 0.12);
+        }
+        .note.info {
+            border-left-color: #74b9ff;
+            background: rgba(116, 185, 255, 0.12);
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        @media (max-width: 400px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        .key {
+            background: rgba(128,128,128,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            opacity: 0.5;
+            margin-top: 24px;
+            border-top: 1px solid rgba(128,128,128,0.1);
+            padding-top: 16px;
+        }
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        a:active {
+            opacity: 0.7;
+        }
+        /* ダークテーマ対応（アプリ側でテーマ変数が反映される） */
+        [data-theme="dark"] body {
+            background: #1a1a1a;
+            color: #eee;
+        }
+        [data-theme="dark"] .section {
+            background: rgba(255,255,255,0.05);
+        }
+        [data-theme="dark"] .code {
+            background: rgba(255,255,255,0.08);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="icon">📖</span>
+        <h1>PaaOS Future 完全ガイド</h1>
+        <span style="margin-left:auto; font-size:12px; opacity:0.6;">v2.5</span>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- カテゴリ1: 基本操作 -->
+    <div class="section">
+        <h2 onclick="toggleSection(this)">
+            <span class="arrow">▶</span> 1. 基本操作とシステムUI
+        </h2>
+        <div class="section-content">
+            <p><strong>🔒 ロック画面</strong></p>
+            <ul>
+                <li><span class="key">スライダー</span> を右にドラッグするか、<span class="key">スペースキー</span> を押すと解除。</li>
+                <li>パスコードを設定している場合は、4桁の数字を入力（キーボード対応）。</li>
+                <li>壁紙はロック画面とデスクトップで共有されます。</li>
+            </ul>
+            <p><strong>📱 ホーム画面（デスクトップ）</strong></p>
+            <ul>
+                <li>アプリアイコンをタップで起動。</li>
+                <li>「編集」ボタン（右下）でアイコンを移動・削除（編集モードではアイコンが揺れます）。</li>
+                <li>「アプリ一覧」（左下）で全アプリを表示し、ホームに追加/削除できます。</li>
+            </ul>
+            <p><strong>📊 ステータスバー（上部）</strong></p>
+            <ul>
+                <li>時刻表示、PaaOSのバージョン表記。</li>
+                <li>ルート権限を取得すると <span class="code">#</span> が表示されます。</li>
+                <li>タップすると <strong>クイックパネル</strong> が開きます。</li>
+            </ul>
+            <p><strong>⚡ クイックパネル</strong></p>
+            <ul>
+                <li>テーマ切替、再読込、設定・通知・アプリ一覧起動、スクリーンショット、フルスクリーン切替。</li>
+                <li>各アイコンは丸形で、タップで実行。</li>
+            </ul>
+            <p><strong>🏠 ホームバー（下部の白いバー）</strong></p>
+            <ul>
+                <li><span class="key">タップ</span> でホームに戻る（アプリを閉じる）。</li>
+                <li><span class="key">上にスワイプ（80px以上）</span> でアプリスイッチャーを開く。</li>
+                <li>マウスでも同様にドラッグ操作可能。</li>
+            </ul>
+            <div class="note info">
+                <strong>💡 ヒント:</strong> フルスクリーンモードではデバイスの枠が消え、ブラウザ全画面で表示されます。
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- カテゴリ2: アプリケーション -->
+    <div class="section">
+        <h2 onclick="toggleSection(this)">
+            <span class="arrow">▶</span> 2. 標準アプリケーション
+        </h2>
+        <div class="section-content">
+            <p><strong>📁 ファイルマネージャー</strong></p>
+            <ul>
+                <li><strong>ホーム画面</strong>: 画像・動画・音楽・ドキュメント・ゴミ箱・すべて（ブラウザ）に分類。</li>
+                <li><strong>ブラウザモード</strong>: フォルダ階層を表示。新規作成、名前変更、削除（ゴミ箱へ）、検索、コピー/切り取り/貼り付け、複数選択一括操作。</li>
+                <li><strong>プレビュー</strong>: テキスト（編集可能）、画像、動画、音楽、ZIPアーカイブ（内部ファイルの抽出）。</li>
+                <li><strong>ゴミ箱</strong>: 削除したファイルを復元または完全削除。</li>
+            </ul>
+            <p><strong>⚙️ 設定アプリ</strong></p>
+            <ul>
+                <li><strong>一般</strong>: ユーザー名、ドックアプリの変更、バックアップ/復元、GitHubからのシステムファイルダウンロード。</li>
+                <li><strong>画面</strong>: テーマ（ダーク/ライト）、フォント（デフォルト/Noto Sans JP）、絵文字（デフォルト/Noto Color Emoji）、アクセントカラー（プリセット/HSLカスタム/壁紙から抽出）、Fluid Glow Design（ガラス効果レベル）、カスタムCSSテーマのアップロード。</li>
+                <li><strong>モジュール</strong>: .modpaa ファイルのインストール、有効/無効切り替え、優先度変更、削除。</li>
+                <li><strong>セキュリティ</strong>: ロック画面用4桁パスコードの設定/解除。</li>
+                <li><strong>情報</strong>: ストレージ使用量、工場出荷リセット、システム情報（info.txt）。</li>
+                <li><strong>アップデート</strong>: オンラインアップデート、手動ZIPアップデート。</li>
+                <li><strong>再起動</strong>: OS再起動（ロック画面へ戻る）。</li>
+                <li><strong>開発者向けオプション</strong>: レイアウト境界線、タップ座標、パフォーマンスモニター、メモリ詳細、キャッシュクリア、UI再描画、壁紙再読込、デバイス情報、エラーログ表示、言語設定（ベータ）。</li>
+            </ul>
+            <p><strong>📺 YouTube アプリ</strong></p>
+            <ul>
+                <li>APIキーとOAuth Client IDを設定することで、検索・再生・コメント表示・チャンネル情報が利用可能。</li>
+                <li><strong>タブ</strong>: ホーム（トレンド）、ショート（縦型短尺）、アカウント（指定チャンネル/ログインユーザーの動画）、履歴（検索履歴）。</li>
+                <li><strong>埋め込みモード</strong>: URLまたは動画IDを直接入力して再生。</li>
+                <li><strong>OAuthログイン</strong>: Googleアカウントでログインすると自分のチャンネル情報を表示。</li>
+            </ul>
+            <p><strong>>_ コマンドプロンプト</strong></p>
+            <ul>
+                <li>200以上のコマンドを搭載（<span class="code">help</span> で一覧表示）。</li>
+                <li>ファイル操作、システム操作、設定変更、ユーティリティ、危険操作（ルート権限が必要なものも）。</li>
+                <li>タイポ補完（類似コマンド提案）、履歴（上下矢印キー）、エイリアス、外部コマンド登録（<span class="code">cmdadd</span>）。</li>
+                <li>ルート権限（<span class="code">root</span>）でシステム内部への完全アクセスが可能。</li>
+            </ul>
+            <p><strong>🔔 通知センター</strong></p>
+            <ul>
+                <li>システムやアプリからの通知を一覧表示。個別削除・全削除可能。</li>
+                <li>保存先: <span class="code">system/notification.json</span></li>
+            </ul>
+            <p><strong>🛒 アプリストア</strong></p>
+            <ul>
+                <li>ストアデータベースからアプリ一覧を取得。</li>
+                <li>インストール/アップデート/アンインストールが可能。</li>
+                <li>インストールしたアプリは <span class="code">apps/&lt;appId&gt;/</span> に展開され、ホーム画面に自動追加。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- カテゴリ3: マルチタスク -->
+    <div class="section">
+        <h2 onclick="toggleSection(this)">
+            <span class="arrow">▶</span> 3. マルチタスク機能
+        </h2>
+        <div class="section-content">
+            <p><strong>🔄 アプリスイッチャー</strong></p>
+            <ul>
+                <li>ホームバーを上にスワイプ（またはドラッグ）すると開く。</li>
+                <li>起動中のアプリがカード表示され、左右にスクロール可能。</li>
+                <li>カードを <strong>上にフリック</strong> するとそのアプリを終了（kill）。</li>
+                <li>カードをタップするとそのアプリを前面に復帰。</li>
+                <li>下部に「<strong>分割表示</strong>」と「<strong>ポップアップ</strong>」ボタンあり。</li>
+            </ul>
+            <p><strong>⊞ 分割表示（スプリットスクリーン）</strong></p>
+            <ul>
+                <li>スイッチャー内の「分割表示」ボタンで2つのアプリを選択。</li>
+                <li>上下に分割され、<strong>分割線をドラッグ</strong> してサイズ変更可能。</li>
+                <li>分割線をタップするとメニューが開き、「上下入れ替え」「アプリ変更」「終了」ができます。</li>
+                <li>分割中はドックが隠れます。</li>
+            </ul>
+            <p><strong>⤴ ポップアップウィンドウ</strong></p>
+            <ul>
+                <li>スイッチャー内の「ポップアップ」ボタンでアプリを選択し、フローティングウィンドウとして開く。</li>
+                <li>ヘッダーをドラッグして移動、右下のハンドルをドラッグしてリサイズ。</li>
+                <li>ヘッダーの「─」で最小化（ドック表示）、「✕」で閉じる。</li>
+            </ul>
+            <div class="note info">
+                <strong>💡 ヒント:</strong> ポップアップ中はドックが隠れますが、最小化すると再表示されます。
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- カテゴリ4: システム設定とカスタマイズ -->
+    <div class="section">
+        <h2 onclick="toggleSection(this)">
+            <span class="arrow">▶</span> 4. システム設定・カスタマイズ
+        </h2>
+        <div class="section-content">
+            <p><strong>🎨 テーマとアクセントカラー</strong></p>
+            <ul>
+                <li><strong>ダーク/ライト</strong>: 設定アプリの「画面」から切り替え。</li>
+                <li><strong>アクセントカラー</strong>: プリセットまたはHSLスライダーで自由に設定。壁紙から自動抽出も可能。</li>
+                <li><strong>カスタムテーマ</strong>: CSSファイル（.css）をアップロードして任意のスタイルを上書き（例: <code>:root { --win-bg: #1a1a1a; }</code>）。</li>
+            </ul>
+            <p><strong>🔤 フォントと絵文字</strong></p>
+            <ul>
+                <li><strong>フォント</strong>: デフォルト（システム標準）または Noto Sans JP。</li>
+                <li><strong>絵文字</strong>: デフォルト（OS依存）または Noto Color Emoji（試験的）。</li>
+            </ul>
+            <p><strong>✨ Fluid Glow Design</strong></p>
+            <ul>
+                <li>半透明パネル（クイックパネル、ドック、モーダルなど）に、ぼかし＋歪み＋光沢のガラス効果を追加。</li>
+                <li>設定の「画面」で「オフ」または「オン」を選択（パフォーマンスに影響するため、低スペック端末ではオフ推奨）。</li>
+            </ul>
+            <p><strong>🖼️ 壁紙</strong></p>
+            <ul>
+                <li>設定アプリの「画面」またはコマンドプロンプト（<span class="code">wallpaper</span>）から画像またはHTMLファイルを選択。</li>
+                <li>保存先: <span class="code">system/wallpaper.{png,html,...}</span></p>
+            </ul>
+            <p><strong>🌐 言語設定（ベータ）</strong></p>
+            <ul>
+                <li>翻訳ファイル（.txt）をアップロードし、UIのテキストを切り替え可能。</li>
+                <li>ファイル形式: <span class="code">原文=翻訳</span> の行を列挙。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- カテゴリ5: ファイルシステムとデータ管理 -->
+    <div class="section">
+        <h2 onclick="toggleSection(this)">
+            <span class="arrow">▶</span> 5. ファイルシステムとデータ管理
+        </h2>
+        <div class="section-content">
+            <p><strong>📂 ディレクトリ構造</strong></p>
+            <ul>
+                <li><strong>ルート</strong>: ユーザーが初回起動時に選択したフォルダ。</li>
+                <li><strong>標準フォルダ</strong>: <code>apps/</code>, <code>pictures/</code>, <code>videos/</code>, <code>music/</code>, <code>documents/</code>, <code>system/</code>, <code>trash/</code>, <code>backup/</code>。</li>
+                <li><strong>システムフォルダ</strong> (<code>system/</code>):
+                    <ul>
+                        <li><code>config.json</code> – 全設定</li>
+                        <li><code>notification.json</code> – 通知履歴</li>
+                        <li><code>errorlog.json</code> – エラーログ</li>
+                        <li><code>version.txt</code> – OSバージョン</li>
+                        <li><code>info.txt</code> – システム情報（OS名、ビルド番号など）</li>
+                        <li><code>boot/</code> – 起動アニメーション画像</li>
+                        <li><code>shutdown/</code> – シャットダウンアニメーション画像</li>
+                        <li><code>language/</code> – 翻訳ファイル</li>
+                        <li><code>themes/</code> – カスタムCSSテーマ</li>
+                        <li><code>modules/</code> – インストール済みモジュール（.modpaa）</li>
+                    </ul>
+                </li>
+            </ul>
+            <p><strong>🗑️ ゴミ箱</strong></p>
+            <ul>
+                <li>削除したファイルは <code>trash/</code> に移動され、元のパス情報は <code>system/trash_meta.json</code> で管理。</li>
+                <li>ゴミ箱から復元または完全削除が可能。</li>
+            </ul>
+            <p><strong>📦 バックアップと復元</strong></p>
+            <ul>
+                <li><strong>バックアップ</strong>: 全ユーザーデータ（<code>backup/</code> を除く）を ZIP 圧縮し、<code>backup/backup_タイムスタンプ.paabak</code> として保存（100MB超のファイルはスキップ、進捗表示とキャンセル対応）。</li>
+                <li><strong>復元</strong>: <code>.paabak</code> を選択し、「上書き（全データ置換）」または「新規フォルダに展開」を選択可能。</li>
+            </ul>
+            <div class="note warn">
+                <strong>⚠️ 注意:</strong> バックアップ・復元において大容量ファイルはスキップされることがあります。
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- カテゴリ6: 高度な機能（ルート・モジュール・リカバリーなど） -->
+    <div class="section">
+        <h2 onclick="toggleSection(this)">
+            <span class="arrow">▶</span> 6. 高度な機能（ルート権限・モジュール・リカバリー）
+        </h2>
+        <div class="section-content">
+            <p><strong>🔑 ルート権限</strong> <span class="badge root">危険</span></p>
+            <ul>
+                <li>コマンドプロンプトで <span class="code">root</span> を実行し、確認ダイアログで承諾すると取得。</li>
+                <li>ルート権限があると、<span class="code">js</span>（JavaScript実行）、<span class="code">cmdadd</span>（独自コマンド登録）、<span class="code">SYSTEM_WRITE_FORCE</span> などの危険な操作が可能。</li>
+                <li>ステータスバーに <span class="code">#</span> が表示され、ルート状態が視覚化されます。</li>
+            </ul>
+            <p><strong>🧩 モジュールシステム</strong></p>
+            <ul>
+                <li><code>.modpaa</code>（ZIP形式）で、<code>manifest.json</code> と <code>module.js</code> を含む。</li>
+                <li>設定アプリの「モジュール」からインストール・有効化・無効化・優先度変更・削除が可能。</li>
+                <li>モジュールは <strong>サンドボックス化されたAPI</strong> を受け取り、ログ出力、通知表示、スタイル追加/削除、設定の読み書き、<code>postMessage</code> 通信などができる。</li>
+                <li>優先度が高いほど後から読み込まれ、他のモジュールの動作を上書き可能。</li>
+            </ul>
+            <p><strong>🔄 アップデート機構</strong></p>
+            <ul>
+                <li><strong>オンライン</strong>: <code>UPINFO.json</code> をGitHubから取得し、新しいバージョンがあれば <code>UP_*.zip</code> をダウンロードして <code>os.html</code> を更新。</li>
+                <li><strong>手動</strong>: 任意のZIP（<code>os.html</code> を含む）を選択して更新。</li>
+                <li>更新後は新しい <code>{rand}os.html</code> にリダイレクトされ、古いファイルは削除されます。</li>
+            </ul>
+            <p><strong>💀 ブルースクリーン（BSOD）とリカバリーモード</strong></p>
+            <ul>
+                <li><strong>BSOD</strong>: システムエラー時、またはコマンド <span class="code">bsod</span> 実行時に表示。エラーコードと関与ファイルを表示し、10秒後にリカバリーモードへ移行。</li>
+                <li><strong>リカバリーモード</strong>: 起動中（再起動アニメーション中）に画面下部をタップするか、BSOD後に自動移行。</li>
+                <li>メニュー: 「続行（再起動）」「ユーザー設定初期化」「更新ファイルインストール」「システム再読み込み」。</li>
+            </ul>
+            <div class="note warn">
+                <strong>⚠️ 注意:</strong> ルート権限やモジュールは信頼できるものだけを使用してください。システムに損害を与える可能性があります。
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- カテゴリ7: 開発者向け情報 -->
+    <div class="section">
+        <h2 onclick="toggleSection(this)">
+            <span class="arrow">▶</span> 7. 開発者向け情報（内部構造・API）
+        </h2>
+        <div class="section-content">
+            <p><strong>🧠 カーネルオブジェクト (<code>kernel</code>)</strong></p>
+            <ul>
+                <li>全機能は <code>PaaOS_Kernel</code> クラスのインスタンス <code>kernel</code> に実装。</li>
+                <li>主要メソッド: <code>launch(id)</code>, <code>goHome()</code>, <code>killApp(id)</code>, <code>reboot()</code>, <code>showDialog()</code> など。</li>
+                <li>デバッグ用: <code>window.paaosStats()</code> でシステム統計情報をコンソールに出力。</li>
+            </ul>
+            <p><strong>📡 メッセージ通信（postMessage）</strong></p>
+            <ul>
+                <li>アプリ（iframe内）とカーネルは <code>window.parent.postMessage</code> で通信。</li>
+                <li>対応アクション: <code>launchApp</code>, <code>goHome</code>, <code>SHOW_DIALOG</code>, <code>CALL_FILE_PICKER</code>, <code>GET_SYSTEM_STATS</code>, <code>INSTALL_MODULE</code> など多数。</li>
+                <li>応答は <code>type</code> フィールドで識別され、<code>requestId</code> でリクエストと対応。</li>
+                <li><strong>セキュリティ</strong>: システムアプリ以外からの危険アクション（BSOD, REBOOTなど）はブロックされ、レートリミット（1秒あたり50メッセージ）が適用されます。</li>
+            </ul>
+            <p><strong>🗂️ ファイルシステムAPI</strong></p>
+            <ul>
+                <li><strong>File System Access API</strong> を使用し、ローカルフォルダをルートとして読み書き。</li>
+                <li>ディレクトリハンドルは IndexedDB に保存され、再起動後も同じフォルダを参照。</li>
+            </ul>
+            <p><strong>📊 システム統計API</strong></p>
+            <ul>
+                <li><code>GET_SYSTEM_STATS</code>: 稼働時間、メモリ使用量、アプリ起動回数、アクティブ時間など。</li>
+                <li><code>GET_STORAGE_STATS</code>: ストレージ使用量/上限。</li>
+            </ul>
+            <p><strong>🔌 モジュールAPI（開発者向け）</strong></p>
+            <ul>
+                <li>モジュールは <code>kernel</code> と <code>api</code> オブジェクトを受け取る。</li>
+                <li><code>api.log()</code>, <code>api.notify()</code>, <code>api.addStyle()</code>, <code>api.getConfig()</code>, <code>api.send()</code> など。</li>
+                <li><code>init()</code> と <code>cleanup()</code> フックを実装可能。</li>
+            </ul>
+            <div class="note info">
+                <strong>💡 ヒント:</strong> 開発者は <code>kernel</code> オブジェクトを直接操作することで、システムのあらゆる部分を制御できます。ただし、権限のないアプリからの操作は制限されます。
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- カテゴリ8: ショートカット・ジェスチャー一覧 -->
+    <div class="section">
+        <h2 onclick="toggleSection(this)">
+            <span class="arrow">▶</span> 8. ショートカット＆ジェスチャー
+        </h2>
+        <div class="section-content">
+            <ul>
+                <li><span class="key">スペースキー（ロック画面）</span> – ロック解除</li>
+                <li><span class="key">ホームバー上スワイプ</span> – スイッチャー表示</li>
+                <li><span class="key">ホームバータップ</span> – ホームに戻る</li>
+                <li><span class="key">ステータスバータップ</span> – クイックパネル開閉</li>
+                <li><span class="key">アイコン長押し（編集モード）</span> – アイコン移動</li>
+                <li><span class="key">ポップアップヘッダードラッグ</span> – ウィンドウ移動</li>
+                <li><span class="key">ポップアップ右下ドラッグ</span> – リサイズ</li>
+                <li><span class="key">分割線ドラッグ</span> – 分割比率変更</li>
+                <li><span class="key">スイッチャーカード上フリック</span> – アプリ終了</li>
+                <li><span class="key">Ctrl+R（ブラウザ）</span> – OS再起動（ページ再読込）</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>PaaOSガイド For Future 2.5</p>
+    </div>
+
+    <script>
+        // セクションの開閉
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('.arrow');
+            const isOpen = content.classList.contains('open');
+            if (isOpen) {
+                content.classList.remove('open');
+                arrow.classList.remove('open');
+            } else {
+                content.classList.add('open');
+                arrow.classList.add('open');
+            }
+        }
+
+        // 初期状態で最初のセクションだけ開いておく
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstSection = document.querySelector('.section .section-content');
+            if (firstSection) {
+                firstSection.classList.add('open');
+                firstSection.previousElementSibling.querySelector('.arrow').classList.add('open');
+            }
+        });
+    </script>
+</body>
+</html>
