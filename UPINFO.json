@@ -1,5 +1,5 @@
 {
-  "version": "PF.2.5.02.R",
+  "version": "PF.2.5.03.R",
   "filename": "UP_PaaOS Future 2.5.zip",
-  "description": "・マテリアルカラー機能の追加 ・Fluid Glow Design機能の追加・YouTubeアプリの改良 ・起動処理の表示を改良"
+  "description": "・表記の一部変更 ・リカバリーメニューを改装(再起動時に画面下をクリック) ・その他一部の仕様変更"
 }
