@@ -1,5 +1,5 @@
 {
-  "version": "PF.2.5.03.R",
+  "version": "PF.2.5.04.R",
   "filename": "UP_PaaOS Future 2.5.zip",
-  "description": "・表記の一部変更 ・リカバリーメニューを改装(再起動時に画面下をクリック) ・その他一部の仕様変更"
+  "description": "・CMDプロンプト「buildapp」コマンドを追加 ・動作の改善"
 }
