@@ -1,5 +1,5 @@
 {
-  "version": "PF.2.5.04.R",
+  "version": "PF.2.5.05.R",
   "filename": "UP_PaaOS Future 2.5.zip",
-  "description": "・CMDプロンプト「buildapp」コマンドを追加 ・動作の改善"
+  "description": "・Noto Color Emojiで数字に絵文字が適用される問題の修正。"
 }
