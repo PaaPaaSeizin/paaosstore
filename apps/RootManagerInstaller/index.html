@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RootManagerInstaller</title>
+    <style>
+        body {
+            background: #1e1e1e;
+            color: #eee;
+            font-family: -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            font-size: 22px;
+            margin: 0 0 10px;
+            color: #ff6b6b;
+        }
+        .status {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .checkbox {
+            margin: 8px 0;
+        }
+        .btn {
+            background: #ff6b6b;
+            border: none;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin: 10px 0;
+            width: fit-content;
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .btn.secondary {
+            background: #444;
+        }
+        .log-area {
+            flex: 1;
+            background: #0a0a0a;
+            border-radius: 12px;
+            padding: 12px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            border: 1px solid #333;
+            margin-top: 12px;
+            min-height: 200px;
+        }
+        .log-line {
+            padding: 2px 0;
+            border-bottom: 1px solid #222;
+        }
+        .log-line.error {
+            color: #ff6b6b;
+        }
+        .log-line.success {
+            color: #69db7c;
+        }
+        .log-line.info {
+            color: #74c0fc;
+        }
+        .flex-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📦 RootManager インストーラー</h1>
+
+<div class="status" id="statusText">🔍 確認中...</div>
+
+<div class="flex-row">
+    <div class="checkbox">
+        <input type="checkbox" id="autoRootCheck" checked>
+        <label for="autoRootCheck">自動 Root モジュールをインストール</label>
+    </div>
+</div>
+
+<div class="flex-row">
+    <button class="btn" id="actionBtn" disabled>インストール</button>
+    <button class="btn secondary" id="uninstallBtn" style="display:none;">アンインストール</button>
+</div>
+
+<div class="log-area" id="logArea"></div>
+
+<script>
+    // ------------------------------------------------------------
+    // メッセージングヘルパー（postMessage + requestId）
+    // ------------------------------------------------------------
+    let msgId = 0;
+    const pending = new Map();
+
+    function sendMessage(data) {
+        return new Promise((resolve) => {
+            const id = ++msgId;
+            data.requestId = id;
+            window.parent.postMessage(data, '*');
+            pending.set(id, resolve);
+        });
+    }
+
+    window.addEventListener('message', (e) => {
+        const data = e.data;
+        if (data.requestId && pending.has(data.requestId)) {
+            const resolve = pending.get(data.requestId);
+            pending.delete(data.requestId);
+            resolve(data);
+        }
+    });
+
+    // ------------------------------------------------------------
+    // UI 要素
+    // ------------------------------------------------------------
+    const statusText = document.getElementById('statusText');
+    const actionBtn = document.getElementById('actionBtn');
+    const uninstallBtn = document.getElementById('uninstallBtn');
+    const logArea = document.getElementById('logArea');
+    const autoRootCheck = document.getElementById('autoRootCheck');
+
+    function log(message, type = 'info') {
+        const line = document.createElement('div');
+        line.className = `log-line ${type}`;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logArea.appendChild(line);
+        logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    function setStatus(text) {
+        statusText.textContent = text;
+    }
+
+    // ------------------------------------------------------------
+    // コアロジック
+    // ------------------------------------------------------------
+    let rootDirHandle = null;          // ユーザーが選択したルートハンドル
+    let isInstalled = false;
+
+    // 1. 存在確認
+    async function checkInstallation() {
+        log('📡 インストール状態を確認中...', 'info');
+        try {
+            const resp = await sendMessage({ type: 'LIST_DIRECTORY', path: 'apps' });
+            if (resp.type === 'DIRECTORY_RESULT') {
+                const entries = resp.entries || [];
+                const found = entries.some(e => e.name === 'RootManager' && e.kind === 'directory');
+                if (found) {
+                    isInstalled = true;
+                    setStatus('✅ RootManager は既にインストールされています。');
+                    actionBtn.textContent = '再インストール';
+                    actionBtn.disabled = false;
+                    uninstallBtn.style.display = 'inline-block';
+                    log('✅ 既存の RootManager を検出しました。', 'success');
+                } else {
+                    isInstalled = false;
+                    setStatus('📭 RootManager は未インストールです。');
+                    actionBtn.textContent = 'インストール';
+                    actionBtn.disabled = false;
+                    uninstallBtn.style.display = 'none';
+                    log('ℹ️ RootManager が見つかりません。', 'info');
+                }
+            } else {
+                throw new Error('ディレクトリ一覧の取得に失敗');
+            }
+        } catch (e) {
+            log(`❌ 確認エラー: ${e.message}`, 'error');
+            setStatus('⚠️ 確認に失敗しました。再試行してください。');
+        }
+    }
+
+    // 2. インストール実行
+    async function performInstall() {
+        actionBtn.disabled = true;
+        log('🚀 インストールを開始します...', 'info');
+
+        try {
+            // 2-1. ディレクトリピッカー
+            if (!rootDirHandle) {
+                log('📂 ルートディレクトリを選択してください（OS起動時に選んだフォルダと同じです）', 'info');
+                try {
+                    rootDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                    log('✅ ディレクトリ選択完了', 'success');
+                } catch (e) {
+                    if (e.name !== 'AbortError') {
+                        log(`❌ ディレクトリ選択エラー: ${e.message}`, 'error');
+                    } else {
+                        log('⏹ ユーザーによりキャンセルされました', 'error');
+                    }
+                    actionBtn.disabled = false;
+                    return;
+                }
+            }
+
+            // 2-2. apps ディレクトリを取得（なければ作成）
+            let appsDir;
+            try {
+                appsDir = await rootDirHandle.getDirectoryHandle('apps', { create: true });
+                log('📁 apps/ ディレクトリを確認', 'success');
+            } catch (e) {
+                log(`❌ apps/ ディレクトリの取得に失敗: ${e.message}`, 'error');
+                actionBtn.disabled = false;
+                return;
+            }
+
+            // 2-3. RootManager ディレクトリを作成
+            let rmDir;
+            try {
+                rmDir = await appsDir.getDirectoryHandle('RootManager', { create: true });
+                log('📁 apps/RootManager を作成しました', 'success');
+            } catch (e) {
+                log(`❌ apps/RootManager の作成に失敗: ${e.message}`, 'error');
+                actionBtn.disabled = false;
+                return;
+            }
+
+            // 2-4. index.html を書き込み
+            const indexHtmlContent = generateRootManagerHTML();
+            try {
+                const fileHandle = await rmDir.getFileHandle('index.html', { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(indexHtmlContent);
+                await writable.close();
+                log('📄 index.html を作成しました', 'success');
+            } catch (e) {
+                log(`❌ index.html の書き込みエラー: ${e.message}`, 'error');
+                actionBtn.disabled = false;
+                return;
+            }
+
+            // 2-5. icon.png を生成して保存
+            try {
+                const iconBlob = await generateIconBlob();
+                const fileHandle = await rmDir.getFileHandle('icon.png', { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(iconBlob);
+                await writable.close();
+                log('🖼️ icon.png を生成しました', 'success');
+            } catch (e) {
+                log(`❌ icon.png の生成エラー: ${e.message}`, 'error');
+                actionBtn.disabled = false;
+                return;
+            }
+
+            // 2-6. オプション：AutoRoot モジュール
+            if (autoRootCheck.checked) {
+                log('🧩 AutoRoot モジュールをインストールします...', 'info');
+                try {
+                    await installAutoRootModule(rootDirHandle);
+                    log('✅ AutoRoot モジュールをインストールしました', 'success');
+                } catch (e) {
+                    log(`❌ AutoRoot モジュールのインストールに失敗: ${e.message}`, 'error');
+                    // ここでは続行（致命的ではない）
+                }
+            }
+
+            // 完了
+            log('🎉 インストールが完了しました！', 'success');
+            setStatus('✅ インストール完了！ RootManager を起動できます。');
+            isInstalled = true;
+            actionBtn.textContent = '再インストール';
+            uninstallBtn.style.display = 'inline-block';
+            actionBtn.disabled = false;
+
+        } catch (e) {
+            log(`❌ 予期せぬエラー: ${e.message}`, 'error');
+            actionBtn.disabled = false;
+        }
+    }
+
+    // 3. アンインストール（ディレクトリ削除）
+    async function performUninstall() {
+        if (!rootDirHandle) {
+            try {
+                rootDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            } catch {
+                log('⏹ キャンセルされました', 'error');
+                return;
+            }
+        }
+        const confirmed = confirm('RootManager を完全に削除しますか？（モジュールは手動で削除してください）');
+        if (!confirmed) return;
+
+        try {
+            const appsDir = await rootDirHandle.getDirectoryHandle('apps');
+            await appsDir.removeEntry('RootManager', { recursive: true });
+            log('🗑️ apps/RootManager を削除しました', 'success');
+            setStatus('📭 アンインストール完了');
+            isInstalled = false;
+            actionBtn.textContent = 'インストール';
+            uninstallBtn.style.display = 'none';
+        } catch (e) {
+            log(`❌ 削除エラー: ${e.message}`, 'error');
+        }
+    }
+
+    // ------------------------------------------------------------
+    // ヘルパー関数：index.html の内容
+    // ------------------------------------------------------------
+    function generateRootManagerHTML() {
+        return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RootManager</title>
+    <style>
+        body { background: #1a1a1a; color: #eee; font-family: -apple-system, sans-serif; padding: 20px; }
+        .card { background: #2a2a2a; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #444; }
+        .btn { background: #ff6b6b; border: none; color: #fff; padding: 10px 18px; border-radius: 30px; font-weight: bold; cursor: pointer; margin: 6px 6px 6px 0; }
+        .btn.sec { background: #444; }
+        .btn:active { transform: scale(0.95); }
+        h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 RootManager</h1>
+
+    <div class="card">
+        <h2>⚡ ルート権限</h2>
+        <button class="btn" id="rootBtn">Root 化</button>
+        <span id="rootStatus">未取得</span>
+    </div>
+
+    <div class="card">
+        <h2>📂 ディレクトリ操作</h2>
+        <button class="btn sec" onclick="listRoot()">ルート一覧</button>
+        <div id="dirList" style="margin-top:8px; background:#111; padding:8px; border-radius:8px; max-height:150px; overflow-y:auto;"></div>
+    </div>
+
+    <div class="card">
+        <h2>📄 ファイル操作</h2>
+        <button class="btn sec" onclick="openFile()">ファイルを開く</button>
+        <textarea id="fileContent" rows="4" style="width:100%; background:#111; color:#eee; border:1px solid #444; border-radius:8px; padding:8px; margin-top:8px;"></textarea>
+        <button class="btn sec" onclick="saveFile()">保存 (自フォルダ内)</button>
+    </div>
+
+    <div class="card">
+        <h2>🎨 外観カスタマイズ</h2>
+        <button class="btn sec" onclick="toggleTheme()">テーマ切り替え</button>
+    </div>
+
+    <script>
+        // RootManager 内部のロジック
+        function sendMsg(data) {
+            return new Promise((resolve) => {
+                const id = Date.now() + Math.random();
+                data.requestId = id;
+                window.parent.postMessage(data, '*');
+                const handler = (e) => {
+                    if (e.data.requestId === id) {
+                        window.removeEventListener('message', handler);
+                        resolve(e.data);
+                    }
+                };
+                window.addEventListener('message', handler);
+            });
+        }
+
+        // Root 化
+        document.getElementById('rootBtn').onclick = async () => {
+            const result = await sendMsg({ action: 'GATISK_EXPLOIT' });
+            document.getElementById('rootStatus').textContent = result.success ? '✅ 取得済み' : '❌ 拒否';
+        };
+
+        // ディレクトリ一覧
+        window.listRoot = async () => {
+            const res = await sendMsg({ type: 'LIST_DIRECTORY', path: '' });
+            const list = document.getElementById('dirList');
+            if (res.entries) {
+                list.innerHTML = res.entries.map(e => e.name + (e.kind === 'directory' ? '/' : '')).join(' ');
+            } else {
+                list.textContent = 'エラー';
+            }
+        };
+
+        // ファイルを開く（簡易）
+        window.openFile = async () => {
+            const path = prompt('ファイルパス (例: system/config.json)');
+            if (!path) return;
+            const res = await sendMsg({ type: 'GET_FILE_DATA', path });
+            if (res.type === 'FILE_BLOB_RESULT') {
+                const text = new TextDecoder().decode(new Uint8Array(res.data));
+                document.getElementById('fileContent').value = text;
+            } else {
+                alert('読み込み失敗');
+            }
+        };
+
+        // 保存（自フォルダ内）
+        window.saveFile = async () => {
+            const name = prompt('ファイル名 (例: memo.txt)');
+            if (!name) return;
+            const content = document.getElementById('fileContent').value;
+            const res = await sendMsg({
+                type: 'SAVE_FILE',
+                appId: 'RootManager',  // 自アプリID
+                fileName: name,
+                data: content
+            });
+            alert(res.type === 'SAVE_OK' ? '保存成功' : '保存失敗');
+        };
+
+        // テーマ切り替え
+        window.toggleTheme = () => {
+            sendMsg({ action: 'toggleTheme' });
+        };
+
+        // 初期表示：ルート状態確認
+        (async () => {
+            const res = await sendMsg({ action: 'CHECK_ROOT_STATUS' });
+            document.getElementById('rootStatus').textContent = res.isRooted ? '✅ 取得済み' : '❌ 未取得';
+        })();
+    </script>
+</body>
+</html>`;
+    }
+
+    // ------------------------------------------------------------
+    // ヘルパー：icon.png 生成（canvas）
+    // ------------------------------------------------------------
+    function generateIconBlob() {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            // 背景
+            ctx.fillStyle = '#2c2c2c';
+            ctx.fillRect(0, 0, 256, 256);
+
+            // テキスト
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 48px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Root', 128, 110);
+            ctx.font = 'bold 32px -apple-system, sans-serif';
+            ctx.fillText('Manager', 128, 170);
+
+            // 枠
+            ctx.strokeStyle = '#ff6b6b';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(20, 20, 216, 216);
+
+            canvas.toBlob((blob) => resolve(blob), 'image/png');
+        });
+    }
+
+    // ------------------------------------------------------------
+    // ヘルパー：AutoRoot モジュールのインストール
+    // ------------------------------------------------------------
+    async function installAutoRootModule(rootHandle) {
+        // 1. モジュールの内容を生成
+        const manifest = {
+            name: 'AutoRoot',
+            version: '1.0',
+            description: '起動時に自動でルート権限を取得します',
+            priority: 10,
+            enabled: true
+        };
+        const moduleCode = `
+            // AutoRoot module
+            (function() {
+                kernel.isRooted = true;
+                document.getElementById('root-indicator').style.display = 'inline';
+                kernel.showOSPopup('AutoRoot', 'ルート権限を自動取得しました');
+            })();
+        `;
+
+        // 2. ZIP 圧縮
+        const zip = new JSZip();
+        zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+        zip.file('module.js', moduleCode);
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+        // 3. system/modules ディレクトリに保存
+        let sysDir = await rootHandle.getDirectoryHandle('system', { create: true });
+        let modDir = await sysDir.getDirectoryHandle('modules', { create: true });
+        const fileHandle = await modDir.getFileHandle('AutoRoot.modpaa', { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(zipBlob);
+        await writable.close();
+    }
+
+    // ------------------------------------------------------------
+    // イベントバインド
+    // ------------------------------------------------------------
+    actionBtn.addEventListener('click', performInstall);
+    uninstallBtn.addEventListener('click', performUninstall);
+
+    // 初期チェック
+    checkInstallation();
+
+    // ログに起動メッセージ
+    log('🚀 RootManagerInstaller が起動しました', 'info');
+    log('💡 インストールにはルートディレクトリの選択が必要です', 'info');
+</script>
+
+</body>
+</html>
