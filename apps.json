@@ -124,7 +124,7 @@
       "id": "RootManagerInstaller",
       "name": "RootManagerInstaller",
       "description": "RootManagerアプリをインストールします。",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/RootManagerInstaller/icon.png",
       "basePath": "apps/RootManagerInstaller/",
       "files": [
