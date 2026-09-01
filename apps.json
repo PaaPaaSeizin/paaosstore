@@ -119,6 +119,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "RootManagerInstaller",
+      "name": "RootManagerInstaller",
+      "description": "RootManagerアプリをインストールします。",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/RootManagerInstaller/icon.png",
+      "basePath": "apps/RootManagerInstaller/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
