@@ -2,680 +2,617 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PaaOS Future</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
-    <style>
-        /* 既存のスタイルはそのまま（省略） */
-        /* ここに完全なスタイルを貼る（変更なし） */
-        :root { --bg: #000; --accent: #ff3e3e; --text: #fff; --glass: rgba(255,255,255,0.15); --win-bg: #fdfdfd; --text-dark: #000; --bsod-bg: #0078d7; --font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; --emoji-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif; }
-        * { user-select: none; -webkit-user-select: none; cursor: default; }
-        input, textarea { user-select: auto !important; -webkit-user-select: auto !important; cursor: text !important; }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; position: fixed; touch-action: none; background: #1a1a1a; color: var(--text); font-family: var(--font-family); }
-        #device { width: 375px; height: 812px; background: var(--bg); border-radius: 55px; border: 12px solid #333; position: relative; overflow: hidden; box-shadow: 0 0 100px rgba(0,0,0,0.5); margin: auto; will-change: transform; transform: translateZ(0); }
-        #wallpaper-container { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-        #wallpaper-container iframe { width: 100%; height: 100%; border: none; pointer-events: none; }
-        #status-bar { position: absolute; top: 0; width: 100%; height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 35px; box-sizing: border-box; font-size: 13px; font-weight: 600; z-index: 12000; cursor: pointer; }
-        #playing-indicator { position: absolute; top: 9px; left: 32%; transform: translateX(-50%) scale(0.8); height: 24px; min-width: 50px; background: #000; border-radius: 14px; display: flex; align-items: center; justify-content: center; padding: 0 12px; gap: 8px; z-index: 12500; border: 0.5px solid rgba(255,255,255,0.2); color: #fff; font-size: 10px; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); }
-        #playing-indicator.active { opacity: 1; transform: translateX(-50%) scale(1); pointer-events: auto; }
-        .playing-wave { display: flex; align-items: flex-end; gap: 2px; height: 10px; }
-        .playing-wave span { width: 2px; background: var(--accent); animation: wave 0.8s infinite ease-in-out; }
-        .playing-wave span:nth-child(2) { animation-delay: 0.2s; }
-        .playing-wave span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes wave { 0%, 100% { height: 3px; } 50% { height: 10px; } }
-        #quick-panel { position: absolute; top: -30px; left: 0; width: 100%; max-height: 75vh; background: rgba(20, 20, 20, 0.7); backdrop-filter: blur(25px); z-index: 11500; border-radius: 0 0 40px 40px; border-bottom: 0.5px solid rgba(255,255,255,0.2); transform: translateY(-100%); transition: transform 0.35s ease-out; display: flex; flex-direction: column; padding: 50px 20px 20px 30px; box-sizing: border-box; color: #fff; overflow-y: auto; overscroll-behavior: contain; }
-        #quick-panel::-webkit-scrollbar { width: 3px; }
-        #quick-panel::-webkit-scrollbar-track { background: transparent; }
-        #quick-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
-        #quick-panel.active { transform: translateY(0); }
-        .quick-grid { width: 100%; display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 18px; padding: 1px 0; margin-top: 10px; }
-        .quick-item:active { background: rgba(255,255,255,0.25); transform: scale(0.92); }
-        .quick-item { width: 64px; height: 64px; background: rgba(255,255,255,0.12); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 8px; cursor: pointer; transition: background 0.2s, transform 0.1s; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.08); }
-        .quick-icon { font-size: 26px; line-height: 1; }
-        .quick-item span { font-size: 9px; opacity: 0.8; line-height: 1.2; max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        #lock-screen { position: absolute; inset: 0; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 100px 20px 80px; box-sizing: border-box; background: #000; transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.4s; }
-        #lock-bg-blur { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(20px); transform: scale(1.1); z-index: -1; opacity: 0.6; }
-        #lock-clock { font-size: 80px; font-weight: 200; text-shadow: 0 0 20px rgba(0,0,0,0.3); }
-        #slider-container { width: 280px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 30px; position: relative; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); overflow: hidden; touch-action: none; }
-        #slider-track { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; color: rgba(255,255,255,0.6); letter-spacing: 1px; pointer-events: none; }
-        #slider-handle { width: 50px; height: 50px; background: #fff; border-radius: 50%; position: absolute; top: 5px; left: 5px; cursor: pointer; display: flex; justify-content: center; align-items: center; color: #000; font-weight: bold; box-shadow: 0 0 15px rgba(0,0,0,0.2); will-change: transform; }
-        #lock-screen.unlocked { transform: scale(1.2) translateY(-20px); opacity: 0; pointer-events: none; }
-        #desktop { height: 100%; width: 100%; position: relative; padding: 60px 15px 120px; box-sizing: border-box; background-size: cover; background-position: center; transition: opacity 0.3s; opacity: 0; overflow: hidden; z-index: 5; }
-        #desktop.active { opacity: 1; }
-        .app-icon { position: absolute; display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 80px; height: 95px; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s; touch-action: none; user-select: none; -webkit-user-drag: none; }
-        .app-icon.moving { opacity: 0.8; transform: scale(1.1); z-index: 10000; filter: drop-shadow(0 15px 15px rgba(0,0,0,0.4)); transition: none; }
-        .edit-mode .app-icon:not(.moving) { animation: shake 0.3s infinite ease-in-out; }
-        @keyframes shake { 0% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } 100% { transform: rotate(-1deg); } }
-        .icon-box { width: 60px; height: 60px; background: var(--glass); border-radius: 16px; backdrop-filter: blur(15px); border: 0.5px solid rgba(255,255,255,0.2); display: flex; justify-content: center; align-items: center; overflow: hidden; font-size: 30px; pointer-events: none; }
-        .icon-box img { width: 100%; height: 100%; object-fit: cover; }
-        .icon-label { margin-top: 6px; font-size: 10px; font-weight: 500; text-shadow: 0 1px 4px rgba(0,0,0,0.8); text-align: center; width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; pointer-events: none; }
-        #window-layer { position: absolute; inset: 0; pointer-events: none; z-index: 1000; }
-        #window-layer > * { pointer-events: auto; }
-        .window { position: absolute; inset: 0; background: var(--win-bg); color: var(--text-dark); transform: translateY(100%) scale(0.1); transition: 0.45s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1000; display: flex; flex-direction: column; opacity: 0; pointer-events: none; }
-        .window.active { transform: translateY(0) scale(1) !important; opacity: 1; pointer-events: auto; left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; }
-        .window.minimized { transform: scale(0.1) !important; opacity: 0; pointer-events: none; }
-        .win-header { height: 70px; padding: 0px 23px 12px 23px; display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 0.5px solid rgba(128,128,128,0.3); font-weight: bold; background: var(--win-bg); }
-        .win-body { flex: 1; overflow-y: auto; background: var(--win-bg); display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; }
-        iframe { width: 100%; height: 100%; border: none; flex: 1; }
-        #dock { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); width: 320px; height: 75px; background: rgba(255,255,255,0.2); backdrop-filter: blur(25px); border-radius: 28px; border: 0.5px solid rgba(255,255,255,0.2); display: none; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 9000; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s; }
-        #dock.hidden { transform: translate(-50%, 150px); opacity: 0; pointer-events: none; }
-        .dock-item { width: 52px; height: 52px; background: rgba(255,255,255,0.1); border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 26px; cursor: pointer; overflow: hidden; transition: transform 0.2s; }
-        .dock-item:active { transform: scale(0.9); }
-        .dock-item img { width: 100%; height: 100%; object-fit: cover; }
-        #edit-trigger { position: absolute; bottom: 105px; right: 25px; padding: 5px 12px; border-radius: 15px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border: 0.5px solid rgba(255,255,255,0.3); color: #fff; font-size: 11px; font-weight: bold; z-index: 9500; display: none; cursor: pointer; }
-        #home-bar-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 30px; z-index: 12000; display: flex; justify-content: center; align-items: center; pointer-events: auto !important; }
-        #home-bar { width: 130px; height: 5px; background: #fff; border-radius: 10px; cursor: pointer; will-change: transform; transition: transform 0.1s linear, background 0.3s; pointer-events: auto !important; }
-        #switcher { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(20px); z-index: 10500; display: none; flex-direction: row; align-items: center; overflow-x: auto; flex-wrap: nowrap; gap: 20px; padding: 80px 50px 0; scrollbar-width: none; opacity: 0; transform: scale(1.1); transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        #switcher.active { display: flex; opacity: 1; transform: scale(1); }
-        .switcher-card { min-width: 240px; height: 480px; background: var(--win-bg); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.4); display: flex; flex-direction: column; flex-shrink: 0; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s; touch-action: none; }
-        .switcher-card.closing { transform: translateY(-100%) scale(0.8); opacity: 0; }
-        .switcher-card-header { padding: 12px; background: rgba(128,128,128,0.1); color: var(--text-dark); font-size: 13px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
-        .switcher-card-body { flex: 1; background: #ccc; pointer-events: none; overflow: hidden; position: relative; background-size: cover; background-position: center; }
-        .list-item { padding: 12px; background: rgba(128,128,128,0.1); border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(128,128,128,0.2); font-size: 13px; }
-        .btn-mini { background: #333; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-size: 10px; cursor: pointer; }
-        .btn-red { background: var(--accent); color: #fff; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
-        .btn-save { background: #4CAF50; color: #fff; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .editor-area { width: 100%; height: 70%; border: 1px solid #ddd; padding: 10px; font-family: monospace; font-size: 12px; box-sizing: border-box; background: transparent; color: inherit; }
-        .notif-item { padding: 12px; border-bottom: 0.5px solid rgba(128,128,128,0.2); display: flex; justify-content: space-between; align-items: center; }
-        .notif-content { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-        .notif-title { font-weight: bold; font-size: 14px; }
-        .notif-msg { font-size: 12px; opacity: 0.8; }
-        .notif-time { font-size: 10px; opacity: 0.5; }
-        #reboot-overlay { position: absolute; inset: 0; background: #000; z-index: 30000; display: none; justify-content: center; align-items: center; }
-        #reboot-display { width: 100%; height: 100%; object-fit: contain; }
-        #recovery-screen { display: none; position: absolute; inset: 0; z-index: 99999; background: #0a0a0a; color: #fff; font-family: 'Courier New', monospace; flex-direction: column; padding: 30px 20px; box-sizing: border-box; touch-action: pan-y; }
-        #recovery-screen.active { display: flex; }
-        #recovery-header { border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 20px; flex-shrink: 0; }
-        #recovery-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        #recovery-menu { display: flex; flex-direction: column; gap: 10px; }
-        .recovery-item { padding: 18px 20px; border: 1px solid #222; border-radius: 12px; background: #111; color: #aaa; cursor: pointer; transition: all 0.15s ease; font-size: 17px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
-        .recovery-item.selected { background: #1a2a1a; border-color: #0f0; color: #0f0; box-shadow: 0 0 25px rgba(0,255,0,0.15); }
-        .recovery-item:active { background: #2a3a2a; transform: scale(0.97); }
-        #recovery-status { margin-top: 20px; padding: 14px; background: #111; border-radius: 10px; font-size: 14px; color: #888; min-height: 50px; border: 1px solid #222; flex-shrink: 0; }
-        #recovery-footer { margin-top: 20px; border-top: 1px solid #333; padding-top: 14px; font-size: 12px; color: #555; text-align: center; flex-shrink: 0; }
-        .recovery-btn { padding: 14px 32px; border-radius: 40px; font-size: 17px; font-weight: bold; border: none; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-        .recovery-btn:active { transform: scale(0.95); }
-        .recovery-btn.execute { background: #0f0; color: #000; }
-        .recovery-btn.cancel { background: #333; color: #fff; }
-        #bsod-screen { position: absolute; inset: 0; background: var(--bsod-bg); z-index: 50000; display: none; flex-direction: column; padding: 40px; box-sizing: border-box; color: #fff; font-family: -apple-system, sans-serif; }
-        #bsod-face { font-size: 60px; margin-bottom: 20px; }
-        #bsod-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
-        #bsod-info { font-size: 14px; line-height: 2.0; }
-        #home-bar-container { display: none; }
-        #desktop.active ~ #home-bar-container { display: flex; }
-        #status-bar, #status-bar span, #status-bar div { color: inherit !important; }
-        .system-popup { position: absolute; top: 50px; left: 10px; right: 10px; background: rgba(255,255,255,0.95); color: #000; padding: 15px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 13000; display: flex; flex-direction: column; gap: 5px; word-break: break-all; max-height: 200px; overflow: hidden; transform: translateY(-100%) scale(0.95); opacity: 0; transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease; }
-        .system-popup.active { transform: translateY(0) scale(1); opacity: 1; }
-        .system-popup.closing { opacity: 0 !important; transform: translateY(-20px) scale(0.95) !important; }
-        #switcher { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) transparent; padding: 60px 0 0 0; }
-        #switcher::-webkit-scrollbar { width: 4px; height: 4px; }
-        #switcher::-webkit-scrollbar-track { background: transparent; }
-        #switcher::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 4px; }
-        .switcher-card { opacity: 0; transform: scale(0.9) translateY(20px); transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; will-change: transform, opacity; }
-        .switcher-card.visible { opacity: 1; transform: scale(1) translateY(0); }
-        .switcher-card.closing { opacity: 0; transform: scale(0.8) translateY(-30px); }
-        @media (hover: hover) { .switcher-card:hover { transform: scale(1.02); box-shadow: 0 25px 50px rgba(0,0,0,0.5); } }
-        #switcher-actions { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; justify-content: center; gap: 16px; padding: 0 20px; z-index: 10; }
-        .switcher-action-btn { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border: 0.5px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.15s; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .switcher-action-btn:active { transform: scale(0.94); background: rgba(255,255,255,0.25); }
-        .switcher-action-btn .icon { font-size: 16px; }
-        #split-view { position: absolute; inset: 0; z-index: 2000; display: none; flex-direction: column; background: var(--win-bg); color: var(--text-dark); }
-        #split-view.active { display: flex; }
-        .split-pane { flex: 1; position: relative; overflow: hidden; background: var(--win-bg); }
-        .split-pane .window { position: absolute; inset: 0; transform: none !important; opacity: 1 !important; pointer-events: auto !important; border-radius: 0 !important; transition: none !important; }
-        .split-pane .window .win-header { padding: 0 16px 8px 16px; height: 60px; }
-        .split-pane .window .win-body { height: calc(100% - 60px); }
-        .split-divider { height: 6px; background: rgba(128,128,128,0.3); cursor: ns-resize; flex-shrink: 0; position: relative; z-index: 10; display: flex; align-items: center; justify-content: center; touch-action: none; transition: background 0.2s; }
-        .split-divider:hover { background: rgba(128,128,128,0.6); }
-        .split-divider::after { content: '⋯'; font-size: 14px; color: rgba(128,128,128,0.5); letter-spacing: 4px; }
-        .split-menu { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: rgba(30,30,30,0.95); backdrop-filter: blur(12px); border-radius: 16px; padding: 8px 4px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); display: none; flex-direction: column; gap: 4px; min-width: 150px; border: 0.5px solid rgba(255,255,255,0.1); }
-        .split-menu.active { display: flex; }
-        .split-menu button { background: transparent; border: none; color: #fff; padding: 8px 20px; text-align: left; font-size: 14px; border-radius: 10px; cursor: pointer; transition: background 0.15s; font-family: inherit; }
-        .split-menu button:hover { background: rgba(255,255,255,0.1); }
-        .split-menu button.danger { color: #ff6b6b; }
-        .split-menu button.danger:hover { background: rgba(255,60,60,0.2); }
-        .popup-window { position: absolute; z-index: 3000; background: var(--win-bg); color: var(--text-dark); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: none; flex-direction: column; min-width: 200px; min-height: 150px; overflow: hidden; resize: none; border: 1px solid rgba(128,128,128,0.2); transition: box-shadow 0.2s; }
-        .popup-window.active { display: flex; }
-        .popup-window .popup-header { height: 44px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: rgba(128,128,128,0.08); border-bottom: 0.5px solid rgba(128,128,128,0.2); cursor: move; flex-shrink: 0; user-select: none; -webkit-user-select: none; }
-        .popup-window .popup-header .popup-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .popup-window .popup-header .popup-title img { width: 20px; height: 20px; border-radius: 4px; object-fit: cover; }
-        .popup-window .popup-header .popup-controls { display: flex; gap: 12px; }
-        .popup-window .popup-header .popup-controls span { cursor: pointer; font-size: 16px; opacity: 0.6; transition: opacity 0.2s; padding: 4px; line-height: 1; }
-        .popup-window .popup-header .popup-controls span:hover { opacity: 1; }
-        .popup-window .popup-header .popup-controls .popup-close { color: var(--accent); }
-        .popup-window .popup-body { flex: 1; overflow: hidden; background: var(--win-bg); }
-        .popup-window .popup-body iframe { width: 100%; height: 100%; border: none; }
-        .popup-window .popup-body .win-body { height: 100%; }
-        .popup-resize-handle { position: absolute; bottom: 0; right: 0; width: 20px; height: 20px; cursor: nwse-resize; z-index: 10; }
-        .popup-resize-handle::after { content: ''; position: absolute; bottom: 4px; right: 4px; width: 10px; height: 10px; border-right: 2px solid rgba(128,128,128,0.4); border-bottom: 2px solid rgba(128,128,128,0.4); }
-        #setup-wizard { background: linear-gradient(145deg, #0a0a0f, #1a1a1f); }
-        .setup-btn { transition: transform 0.2s, background 0.2s; }
-        .setup-btn:active { transform: scale(0.96); }
-        .theme-option:hover { transform: scale(1.05); }
-        .passcode-btn:active { background: rgba(255,255,255,0.2); }
-        #setup-preview { box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-        #device.fullscreen-mode { width: 100vw !important; height: 100vh !important; border: none !important; border-radius: 0 !important; margin: 0 !important; }
-        /* FLUID GLOW DESIGN（省略） */
-        .fluid-glow { --fg-blur: 8px; --fg-tint: rgba(255,255,255,0.15); --fg-shine-opacity: 0.5; --fg-distortion-filter: none; --fg-box-shadow: 0 6px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4); position: relative; backdrop-filter: blur(var(--fg-blur)); -webkit-backdrop-filter: blur(var(--fg-blur)); background: rgba(255,255,255,0.08); box-shadow: var(--fg-box-shadow); border: 0.5px solid rgba(255,255,255,0.15); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
-        .fluid-glow::before { content: ''; position: absolute; inset: 0; z-index: 0; background: var(--fg-tint); backdrop-filter: blur(var(--fg-blur)); -webkit-backdrop-filter: blur(var(--fg-blur)); filter: var(--fg-distortion-filter); pointer-events: none; border-radius: inherit; }
-        .fluid-glow::after { content: ''; position: absolute; inset: 0; z-index: 1; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="url(%23glass-shine)" opacity="0.4"/></svg>'); background-size: 100% 100%; opacity: var(--fg-shine-opacity); pointer-events: none; border-radius: inherit; mix-blend-mode: overlay; }
-        .fluid-glow > * { position: relative; z-index: 2; }
-        .fluid-glow-level-off .fluid-glow, .fluid-glow-level-off .fluid-glow::before, .fluid-glow-level-off .fluid-glow::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; filter: none !important; background: rgba(255,255,255,0.05) !important; box-shadow: none !important; border-color: rgba(255,255,255,0.05) !important; }
-        .fluid-glow-level-off .fluid-glow::after { opacity: 0 !important; }
-        .fluid-glow-level-low .fluid-glow { --fg-blur: 4px; --fg-tint: rgba(255,255,255,0.10); --fg-shine-opacity: 0.25; --fg-distortion-filter: url(#glass-distortion-low); --fg-box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2); }
-        .fluid-glow-level-medium .fluid-glow { --fg-blur: 10px; --fg-tint: rgba(255,255,255,0.18); --fg-shine-opacity: 0.45; --fg-distortion-filter: url(#glass-distortion-medium); --fg-box-shadow: 0 8px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3); }
-        .fluid-glow-level-high .fluid-glow { --fg-blur: 16px; --fg-tint: rgba(255,255,255,0.25); --fg-shine-opacity: 0.7; --fg-distortion-filter: url(#glass-distortion-high); --fg-box-shadow: 0 12px 40px rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.5), 0 0 30px rgba(255,255,255,0.05); }
-        .fluid-glow-target, #quick-panel, #dock, #lock-screen .quick-item, #lock-screen #slider-container, #desktop .app-icon .icon-box, #switcher .switcher-card, #switcher .switcher-card-header, #switcher-actions .switcher-action-btn, #passcode-pad, #system-popup-layer .system-popup, .modal-dialog, .split-divider, #yt-settings-overlay > div, .quick-item, .dock-item, .setup-btn, .passcode-btn, .theme-option { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
-        .fluid-glow-level-low .fluid-glow-target, .fluid-glow-level-low #quick-panel, .fluid-glow-level-low #dock, .fluid-glow-level-low #lock-screen .quick-item, .fluid-glow-level-low #lock-screen #slider-container, .fluid-glow-level-low #desktop .app-icon .icon-box, .fluid-glow-level-low #switcher .switcher-card, .fluid-glow-level-low #switcher .switcher-card-header, .fluid-glow-level-low #switcher-actions .switcher-action-btn, .fluid-glow-level-low #passcode-pad, .fluid-glow-level-low #system-popup-layer .system-popup, .fluid-glow-level-low .modal-dialog, .fluid-glow-level-low .split-divider, .fluid-glow-level-low #yt-settings-overlay > div, .fluid-glow-level-low .quick-item, .fluid-glow-level-low .dock-item, .fluid-glow-level-low .setup-btn, .fluid-glow-level-low .passcode-btn, .fluid-glow-level-low .theme-option { --fg-blur: 4px; --fg-tint: rgba(255,255,255,0.10); --fg-shine-opacity: 0.25; --fg-distortion-filter: url(#glass-distortion-low); --fg-box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2); backdrop-filter: blur(var(--fg-blur)); -webkit-backdrop-filter: blur(var(--fg-blur)); background: rgba(255,255,255,0.08); box-shadow: var(--fg-box-shadow); }
-        .fluid-glow-level-medium .fluid-glow-target, .fluid-glow-level-medium #quick-panel, .fluid-glow-level-medium #dock, .fluid-glow-level-medium #lock-screen .quick-item, .fluid-glow-level-medium #lock-screen #slider-container, .fluid-glow-level-medium #desktop .app-icon .icon-box, .fluid-glow-level-medium #switcher .switcher-card, .fluid-glow-level-medium #switcher .switcher-card-header, .fluid-glow-level-medium #switcher-actions .switcher-action-btn, .fluid-glow-level-medium #passcode-pad, .fluid-glow-level-medium #system-popup-layer .system-popup, .fluid-glow-level-medium .modal-dialog, .fluid-glow-level-medium .split-divider, .fluid-glow-level-medium #yt-settings-overlay > div, .fluid-glow-level-medium .quick-item, .fluid-glow-level-medium .dock-item, .fluid-glow-level-medium .setup-btn, .fluid-glow-level-medium .passcode-btn, .fluid-glow-level-medium .theme-option { --fg-blur: 10px; --fg-tint: rgba(255,255,255,0.18); --fg-shine-opacity: 0.45; --fg-distortion-filter: url(#glass-distortion-medium); --fg-box-shadow: 0 8px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3); backdrop-filter: blur(var(--fg-blur)); -webkit-backdrop-filter: blur(var(--fg-blur)); background: rgba(255,255,255,0.12); box-shadow: var(--fg-box-shadow); }
-        .fluid-glow-level-high .fluid-glow-target, .fluid-glow-level-high #quick-panel, .fluid-glow-level-high #dock, .fluid-glow-level-high #lock-screen .quick-item, .fluid-glow-level-high #lock-screen #slider-container, .fluid-glow-level-high #desktop .app-icon .icon-box, .fluid-glow-level-high #switcher .switcher-card, .fluid-glow-level-high #switcher .switcher-card-header, .fluid-glow-level-high #switcher-actions .switcher-action-btn, .fluid-glow-level-high #passcode-pad, .fluid-glow-level-high #system-popup-layer .system-popup, .fluid-glow-level-high .modal-dialog, .fluid-glow-level-high .split-divider, .fluid-glow-level-high #yt-settings-overlay > div, .fluid-glow-level-high .quick-item, .fluid-glow-level-high .dock-item, .fluid-glow-level-high .setup-btn, .fluid-glow-level-high .passcode-btn, .fluid-glow-level-high .theme-option { --fg-blur: 18px; --fg-tint: rgba(255,255,255,0.25); --fg-shine-opacity: 0.7; --fg-distortion-filter: url(#glass-distortion-high); --fg-box-shadow: 0 12px 40px rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.5), 0 0 30px rgba(255,255,255,0.05); backdrop-filter: blur(var(--fg-blur)); -webkit-backdrop-filter: blur(var(--fg-blur)); background: rgba(255,255,255,0.18); box-shadow: var(--fg-box-shadow); }
-        [data-theme="dark"] .fluid-glow-target, [data-theme="dark"] #quick-panel, [data-theme="dark"] #dock, [data-theme="dark"] #lock-screen .quick-item, [data-theme="dark"] #lock-screen #slider-container, [data-theme="dark"] #desktop .app-icon .icon-box, [data-theme="dark"] #switcher .switcher-card, [data-theme="dark"] #switcher .switcher-card-header, [data-theme="dark"] #switcher-actions .switcher-action-btn, [data-theme="dark"] #passcode-pad, [data-theme="dark"] #system-popup-layer .system-popup, [data-theme="dark"] .modal-dialog, [data-theme="dark"] .split-divider, [data-theme="dark"] #yt-settings-overlay > div, [data-theme="dark"] .quick-item, [data-theme="dark"] .dock-item, [data-theme="dark"] .setup-btn, [data-theme="dark"] .passcode-btn, [data-theme="dark"] .theme-option { --fg-tint: rgba(0,0,0,0.25); background: rgba(0,0,0,0.20); border-color: rgba(255,255,255,0.08); }
-    </style>
-</head>
-<body oncontextmenu="return false;">
-<svg style="position:absolute;width:0;height:0;pointer-events:none;" aria-hidden="true">
-  <defs>
-    <filter id="glass-distortion-low" x="-20%" y="-20%" width="140%" height="140%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" result="noise" />
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="8" xChannelSelector="R" yChannelSelector="G" />
-    </filter>
-    <filter id="glass-distortion-medium" x="-20%" y="-20%" width="140%" height="140%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="15" xChannelSelector="R" yChannelSelector="G" />
-    </filter>
-    <filter id="glass-distortion-high" x="-20%" y="-20%" width="140%" height="140%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="4" result="noise" />
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="22" xChannelSelector="R" yChannelSelector="G" />
-    </filter>
-    <linearGradient id="glass-shine" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="rgba(255,255,255,0.6)" />
-      <stop offset="30%"  stop-color="rgba(255,255,255,0.0)" />
-      <stop offset="70%"  stop-color="rgba(255,255,255,0.0)" />
-      <stop offset="100%" stop-color="rgba(255,255,255,0.3)" />
-    </linearGradient>
-  </defs>
-</svg>
-<div id="device">
-    <div id="wallpaper-container"></div>
-    <div id="status-bar" onclick="kernel.togglePanel()">
-        <span id="clock">00:00</span>
-        <div style="display:flex; gap:8px;"><span id="root-indicator" style="color:var(--accent); display:none;">#</span><span>Future</span><span>2.5</span></div>
-    </div>
-    <div id="playing-indicator" onclick="kernel.launchPlaybackApp(event)">
-        <div class="playing-wave"><span></span><span></span><span></span></div>
-        <span id="playing-label">再生中</span>
-    </div>
-    <div id="quick-panel">
-        <div style="font-size:18px; font-weight:bold; padding-bottom: 12px; margin-top: 30px;">クイックパネル</div>
-        <div class="quick-grid" id="quick-grid-container"></div>
-        <div id="panel-handle" onclick="kernel.togglePanel()"></div>
-    </div>
-    <div id="lock-screen">
-        <div id="lock-bg-blur"></div>
-        <div id="lock-clock">00:00</div>
-        <div id="slider-container">
-            <div id="slider-track">スライドしてロック解除</div>
-            <div id="slider-handle">＞</div>
-        </div>
-    </div>
-    <div id="desktop"></div>
-    <div id="window-layer"></div>
-    <div id="switcher"></div>
-    <div id="dock"></div>
-    <div id="edit-trigger" onclick="kernel.toggleEditMode()">編集</div>
-    <div id="app-drawer-trigger" onclick="kernel.showAppDrawer()" style="position:absolute; bottom:105px; left:25px; padding:5px 12px; border-radius:15px; background:rgba(255,255,255,0.2); backdrop-filter:blur(10px); border:0.5px solid rgba(255,255,255,0.3); color:#fff; font-size:11px; font-weight:bold; z-index:500; cursor:pointer;">アプリ一覧</div>
-    <div id="home-bar-container"><div id="home-bar"></div></div>
-    <div id="system-popup-layer"></div>
-    <div id="reboot-overlay" onclick="kernel.checkRecoveryTrigger(event)"><img id="reboot-display" src=""></div>
-    <div id="recovery-screen">
-        <div id="recovery-header"><div style="font-size:22px; font-weight:bold;">PaaOS Recovery</div><div style="font-size:12px; opacity:0.6;">v2.5 - システムリカバリーモード</div></div>
-        <div id="recovery-body"><div id="recovery-menu"></div><div id="recovery-status"></div></div>
-        <div id="recovery-footer"><span>↑↓ 選択 / Enter 実行 / ESC キャンセル</span></div>
-    </div>
-    <div id="bsod-screen">
-        <div id="bsod-face">(´･ω･`)</div>
-        <div id="bsod-title">PaaOSを強制終了しました。</div>
-        <div id="bsod-info">
-            <p>問題が発生したため、全アプリを停止しました。</p>
-            <p id="bsod-error-code">エラーコード: [Wait]</p>
-            <p id="bsod-involved-file">関与したファイル: [Wait]</p>
-            <br>
-            <p id="bsod-timer">10秒後にリカバリーモードを開始します...</p>
-        </div>
-    </div>
-</div>
-
-<script>
-// ============================================================
-//  PaaOS_Kernel クラス（変更部分のみ追加・修正）
-// ============================================================
-class PaaOS_Kernel {
-    constructor() {
-        this.root = null;
-        this.apps = {};
-        this.dbName = "PaaOS_Final";
-        this.config = {
-            disabled: [],
-            hiddenApps: [],
-            theme: 'light',
-            userName: '',
-            passcode: '',
-            dockApps: ['sys.files', 'sys.youtube', 'sys.settings'],
-            appPositions: {},
-            customThemeEnabled: false,
-            customThemeFile: null,
-            fontFamily: 'default',
-            emojiFamily: 'default',
-            fluidGlowLevel: 'off'
-        };
-        this._buildMode = false;
-        this._buildAppName = '';
-        this._buildStep = '';
-        this._buildHtmlContent = '';
-        this.quickItems = [
-            { id: 'theme', icon: '☀️', label: 'テーマ', action: 'toggleTheme' },
-            { id: 'reload', icon: '🔄', label: '再読み込み', action: 'reload' },
-            { id: 'settings', icon: '⚙️', label: '設定', action: 'launch', arg: 'sys.settings' },
-            { id: 'notifications', icon: '🔔', label: '通知', action: 'launch', arg: 'sys.notifications' },
-            { id: 'appdrawer', icon: '📱', label: 'アプリ一覧', action: 'showAppDrawer' },
-            { id: 'screenshot', icon: '📸', label: 'スクリーンショット', action: 'takeSystemScreenshot' },
-            { id: 'fullscreen', icon: '⛶', label: 'フルスクリーン', action: 'toggleFullscreen' },
-        ];
-        this._updateCache = { available: false, version: null, filename: null, description: null, lastCheck: 0 };
-        this._updateCheckInProgress = false;
-        this._timers = { panel: null, switcher: null, launch: null, goHome: null, killApp: null, popup: null, dialog: null, reboot: null };
-        this._isBootInProgress = false;
-        this._isDragging = false;
-        this.translations = new Map();
-        this.currentLanguage = 'ja';
-        this.popupState = { active: false, appId: null, window: null, x: 60, y: 100, width: 320, height: 400 };
-        this.splitState = { active: false, topId: null, bottomId: null, topWin: null, bottomWin: null, ratio: 50, container: null, divider: null };
-        this._appDrawerVisible = false;
-        this.activeAppId = null;
-        this.runningApps = [];
-        this.panelActive = false;
-        this.isSwitcherActive = false;
-        this.folders = ['apps', 'pictures', 'videos', 'media', 'music', 'documents', 'system'];
-        this.fmPath = [];
-        this.movingAppId = null;
-        this.isEditMode = false;
-        this.gridSize = { x: 85, y: 100 };
-        this.isRooted = false;
-        this.msgCounter = {};
-        this.fmViewMode = 'home';
-        this.fmCategory = '';
-        this._returnToCategory = false;
-        this.fmTrashDir = null;
-        this.fmClipboard = null;
-        this.fmSelectMode = false;
-        this.fmSelected = new Set();
-        this._previewReturnMode = null;
-        this._previewSearchKeyword = '';
-        this._lastSearchKeyword = '';
-        this.mediaAppId = null;
-        this.isBooting = false;
-        this.recoveryIndex = 0;
-        this.recoveryConfirmation = false;
-        this.recoveryMenu = [
-            { label: "続行(再起動)", action: "reboot_normal" },
-            { label: "ユーザー設定の初期化", action: "wipe_config" },
-            { label: "更新ファイルのインストール", action: "install_update" },
-            { label: "システム再読み込み", action: "reload" }
-        ];
-        this.lastTouchPos = { x: 187, y: 406 };
-        this.updateTime();
-        setInterval(() => this.updateTime(), 1000);
-        this.initLockScreen();
-        this.initHomeBar();
-        this.initMoveSystem();
-        this.initMediaWatcher();
-    }
-
-    // --- 既存のメソッドはそのまま（省略） ---
-    // ここにすべての既存メソッド（updateTime, toggleFullscreen, renderQuickPanel, togglePanel, startPopupApp, ...）が含まれます
-    // 実際のコードでは省略せずに全て記述しますが、この回答では変更点だけを明示するため、
-    // 後述の scanApps と renderSysApp の追加部分を強調します。
-
-    // ========== scanApps にインストーラーを追加 ==========
-    async scanApps() {
-        this.apps = {
-            'sys.files': { name: 'ファイル', icon: '📁', type: 'sys' },
-            'sys.settings': { name: '設定', icon: '⚙️', type: 'sys' },
-            'sys.youtube': { name: 'YouTube', icon: '📺', type: 'sys' },
-            'sys.notifications': { name: '通知', icon: '🔔', type: 'sys' },
-            'sys.cmd': { name: 'CMDプロンプト', icon: '>_', type: 'sys' },
-            'sys.appstore': { name: 'アプリストア', icon: '🛒', type: 'sys' },
-            // ★ 新規追加：RootManager インストーラー（システムアプリ）
-            'sys.rootmanagerinstaller': { name: 'RootManager Installer', icon: '📦', type: 'sys' }
-        };
-        // 既存のアプリ読み込み処理（変更なし）
-        let storeData = null;
-        try { storeData = await this.fetchStoreApps(); } catch(e) { console.warn('Store fetch error', e); }
-        const appsDir = await this.root.getDirectoryHandle('apps');
-        for await (const entry of appsDir.values()) {
-            if (entry.kind !== 'directory') continue;
-            if (this.config.disabled.includes(entry.name)) continue;
-            const appId = entry.name;
-            try {
-                let icon = '📱';
-                try { const iconFile = await entry.getFileHandle('icon.png'); icon = URL.createObjectURL(await iconFile.getFile()); } catch(e) {}
-                const htmlFile = await entry.getFileHandle('index.html');
-                const html = await (await htmlFile.getFile()).text();
-                let displayName = appId;
-                if (storeData && storeData.apps) {
-                    const info = storeData.apps.find(a => a.id === appId);
-                    if (info && info.name) displayName = info.name;
-                }
-                this.apps[appId] = { name: displayName, icon: icon, type: 'app', content: html, _folder: appId };
-            } catch(e) { console.warn(`アプリ ${appId} の読み込みに失敗:`, e); }
-        }
-    }
-
-    // ========== renderSysApp にインストーラーの描画を追加 ==========
-    async renderSysApp(id) {
-        const body = document.getElementById(`body-${id}`);
-        // 既存のシステムアプリのハンドラはそのまま（settings, files, cmd, youtube, appstore, notifications）
-        // ここでは sys.rootmanagerinstaller の処理を追加
-        if (id === 'sys.rootmanagerinstaller') {
-            await this.renderRootManagerInstaller(body);
-            return;
-        }
-        // 以下、既存の renderSysApp のコード（省略）
-        // （実際には settings, files, youtube, appstore, cmd, notifications の分岐が続く）
-    }
-
-    // ========== RootManager インストーラー本体 ==========
-    async renderRootManagerInstaller(body) {
-        // 状態
-        const self = this;
-        let isInstalled = false;
-        let installLog = [];
-
-        // ログ追加
-        const addLog = (msg, isError = false) => {
-            installLog.push({ msg, isError, time: new Date().toLocaleTimeString() });
-            const logContainer = body.querySelector('#installer-log');
-            if (logContainer) {
-                const line = document.createElement('div');
-                line.style.cssText = `padding: 2px 0; font-size: 12px; color: ${isError ? '#ff6b6b' : 'inherit'}; border-bottom: 1px solid rgba(128,128,128,0.05);`;
-                line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-                logContainer.appendChild(line);
-                logContainer.scrollTop = logContainer.scrollHeight;
-            }
-        };
-
-        // インストール済みチェック
-        const checkInstalled = async () => {
-            try {
-                const appDir = await this.root.getDirectoryHandle('apps');
-                await appDir.getDirectoryHandle('RootManager');
-                isInstalled = true;
-            } catch(e) { isInstalled = false; }
-        };
-        await checkInstalled();
-
-        // UI構築
-        body.innerHTML = `
-            <div style="padding: 20px; display: flex; flex-direction: column; height: 100%;">
-                <h2 style="margin: 0 0 8px 0;">📦 RootManager インストーラー</h2>
-                <div style="font-size: 13px; opacity: 0.7; margin-bottom: 16px;">
-                    RootManager はルート権限を活用したシステム管理アプリです。
-                </div>
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                    <span style="font-weight: bold;">状態:</span>
-                    <span id="install-status" style="color: ${isInstalled ? '#4CAF50' : 'var(--accent)'};">
-                        ${isInstalled ? '✅ インストール済み' : '❌ 未インストール'}
-                    </span>
-                </div>
-                ${!isInstalled ? `
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-                            <input type="checkbox" id="auto-root-check" checked>
-                            AutoRoot モジュールもインストール（起動時に自動で Root 化）
-                        </label>
-                    </div>
-                    <button id="install-btn" class="btn-red" style="background: var(--accent); padding: 14px; border-radius: 30px; font-size: 16px; margin-bottom: 20px;">
-                        🚀 インストール開始
-                    </button>
-                ` : `
-                    <button class="btn-red" style="background: #4CAF50; padding: 14px; border-radius: 30px; font-size: 16px; margin-bottom: 20px;" onclick="kernel.launch('RootManager')">
-                        ▶ RootManager を起動
-                    </button>
-                `}
-                <div style="flex: 1; min-height: 0;">
-                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">📋 ログ</div>
-                    <div id="installer-log" style="background: rgba(0,0,0,0.05); border-radius: 12px; padding: 8px 12px; height: 100%; overflow-y: auto; font-family: monospace; font-size: 11px; border: 1px solid rgba(128,128,128,0.1); min-height: 120px;">
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // インストールボタン処理
-        if (!isInstalled) {
-            const btn = body.querySelector('#install-btn');
-            btn.addEventListener('click', async () => {
-                btn.disabled = true;
-                btn.textContent = '⏳ インストール中...';
-                const autoRoot = body.querySelector('#auto-root-check').checked;
-                await this.installRootManager(addLog, autoRoot);
-                // 状態更新
-                await checkInstalled();
-                const statusEl = body.querySelector('#install-status');
-                if (statusEl) {
-                    statusEl.textContent = isInstalled ? '✅ インストール済み' : '❌ インストール失敗';
-                    statusEl.style.color = isInstalled ? '#4CAF50' : '#ff6b6b';
-                }
-                btn.disabled = false;
-                btn.textContent = '🚀 インストール開始';
-                if (isInstalled) {
-                    btn.style.display = 'none';
-                    const launchBtn = document.createElement('button');
-                    launchBtn.className = 'btn-red';
-                    launchBtn.style.cssText = 'background: #4CAF50; padding: 14px; border-radius: 30px; font-size: 16px; margin-bottom: 20px;';
-                    launchBtn.textContent = '▶ RootManager を起動';
-                    launchBtn.onclick = () => this.launch('RootManager');
-                    btn.parentNode.insertBefore(launchBtn, btn);
-                }
-            });
-        }
-    }
-
-    // ========== インストール処理 ==========
-    async installRootManager(addLog, autoRoot) {
-        try {
-            // ステップ1: ディレクトリ作成
-            addLog('📁 apps/RootManager ディレクトリを作成中...');
-            const appsDir = await this.root.getDirectoryHandle('apps', { create: true });
-            const appDir = await appsDir.getDirectoryHandle('RootManager', { create: true });
-            addLog('✅ ディレクトリ作成成功');
-
-            // ステップ2: index.html 作成
-            addLog('📄 index.html を作成中...');
-            const indexHtml = this.getRootManagerHtml();
-            const indexHandle = await appDir.getFileHandle('index.html', { create: true });
-            const indexWritable = await indexHandle.createWritable();
-            await indexWritable.write(indexHtml);
-            await indexWritable.close();
-            addLog('✅ index.html 作成完了');
-
-            // ステップ3: icon.png 生成
-            addLog('🖼️ icon.png を生成中...');
-            const iconBlob = await this.generateIconBlob('Root\nManager');
-            const iconHandle = await appDir.getFileHandle('icon.png', { create: true });
-            const iconWritable = await iconHandle.createWritable();
-            await iconWritable.write(iconBlob);
-            await iconWritable.close();
-            addLog('✅ icon.png 生成完了');
-
-            // ステップ4: AutoRoot モジュール（オプション）
-            if (autoRoot) {
-                addLog('🔧 AutoRoot モジュールを作成中...');
-                await this.createAutoRootModule(addLog);
-                addLog('✅ AutoRoot モジュール作成完了');
-            }
-
-            // ステップ5: スキャン更新
-            addLog('🔄 アプリ一覧を更新中...');
-            await this.scanApps();
-            this.renderDesktop();
-            this.renderDock();
-            addLog('🎉 RootManager のインストールが完了しました！');
-        } catch (err) {
-            addLog(`❌ エラー: ${err.message}`, true);
-            console.error(err);
-        }
-    }
-
-    // ========== RootManager アプリの HTML ==========
-    getRootManagerHtml() {
-        return `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RootManager</title>
+    <title>RootManagerInstaller</title>
     <style>
-        body { margin: 0; padding: 20px; font-family: -apple-system, sans-serif; background: var(--win-bg, #fff); color: var(--text-dark, #000); }
-        .card { background: rgba(128,128,128,0.08); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
-        .btn { background: var(--accent, #ff3e3e); color: #fff; border: none; padding: 10px 20px; border-radius: 30px; font-weight: bold; cursor: pointer; width: 100%; }
-        .btn:active { transform: scale(0.95); }
-        .status { font-size: 14px; }
-        .label { font-weight: bold; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: var(--win-bg, #f5f5f5);
+            color: var(--text-dark, #000);
+            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        h1 {
+            font-size: 22px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-box {
+            flex: 1;
+            background: rgba(128,128,128,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid rgba(128,128,128,0.2);
+            min-height: 200px;
+            max-height: 60vh;
+            margin: 10px 0;
+        }
+        .status-line {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(128,128,128,0.05);
+        }
+        .status-line.error {
+            color: #ff6b6b;
+        }
+        .status-line.success {
+            color: #4CAF50;
+        }
+        .options {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .options label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: 600;
+            background: var(--accent, #ff3e3e);
+            color: #fff;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            touch-action: manipulation;
+        }
+        button:active {
+            transform: scale(0.96);
+        }
+        button:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(128,128,128,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent, #ff3e3e);
+            transition: width 0.3s ease;
+        }
+        .footer {
+            margin-top: auto;
+            font-size: 12px;
+            opacity: 0.6;
+            text-align: center;
+            padding: 10px 0;
+        }
     </style>
 </head>
 <body>
-    <h2>⚙️ RootManager</h2>
-    <div class="card">
-        <div class="status"><span class="label">Root 状態:</span> <span id="root-status">確認中...</span></div>
-        <button class="btn" onclick="checkRoot()">🔄 Root 状態を再確認</button>
-        <button class="btn" style="margin-top:8px;" onclick="toggleRoot()">🔓 Root 権限を切り替え</button>
-    </div>
-    <div class="card">
-        <div class="status"><span class="label">テーマ:</span> <span id="theme-status">取得中...</span></div>
-        <button class="btn" style="margin-top:8px;" onclick="toggleTheme()">🎨 テーマ切り替え</button>
-    </div>
-    <div class="card">
-        <div class="status"><span class="label">ストレージ:</span> <span id="storage-status">取得中...</span></div>
-        <button class="btn" style="margin-top:8px;" onclick="refreshStorage()">🔄 更新</button>
-    </div>
-    <script>
-        function sendMessage(data) { window.parent.postMessage(data, '*'); }
-        function checkRoot() {
-            sendMessage({ action: 'CHECK_ROOT_STATUS', requestId: Date.now() });
-        }
-        function toggleRoot() {
-            sendMessage({ action: 'GATISK_EXPLOIT', requestId: Date.now() });
-        }
-        function toggleTheme() {
-            sendMessage({ action: 'toggleTheme' });
-        }
-        function refreshStorage() {
-            sendMessage({ action: 'GET_STORAGE_STATS', requestId: Date.now() });
-        }
-        window.addEventListener('message', (e) => {
-            const data = e.data;
-            if (data.type === 'ROOT_STATUS_RESULT') {
-                document.getElementById('root-status').textContent = data.isRooted ? '✅ 有効' : '❌ 無効';
-            }
-            if (data.type === 'STORAGE_STATS_RESULT') {
-                const stats = data.stats;
-                document.getElementById('storage-status').textContent = stats.error ? '取得失敗' : \`\${(stats.usage / 1048576).toFixed(1)} MB / \${(stats.quota / 1073741824).toFixed(1)} GB\`;
-            }
-            if (data.action === 'toggleTheme') {
-                // テーマ変更はカーネルが処理するので、ここでは何もしない
-            }
-        });
-        // 初期読み込み
-        checkRoot();
-        refreshStorage();
-        // テーマ状態は定期的に更新（簡易）
-        setInterval(() => { checkRoot(); }, 30000);
-    </script>
-</body>
-</html>`;
-    }
 
-    // ========== アイコン生成 ==========
-    generateIconBlob(text) {
-        return new Promise((resolve) => {
+<h1>📦 RootManager インストーラ</h1>
+<div class="options">
+    <label>
+        <input type="checkbox" id="autoRootCheck" checked>
+        自動ルート化モジュールもインストール
+        <span style="font-size:12px; opacity:0.6;">(起動時に root 権限を自動付与)</span>
+    </label>
+</div>
+<button id="installBtn">🚀 インストール開始</button>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+<div class="status-box" id="logBox"></div>
+<div class="footer">RootManagerInstaller v1.0 — PaaOS Future</div>
+
+<script>
+    (async function() {
+        // 親ウィンドウのカーネルを取得 (直接アクセス)
+        const kernel = window.parent.kernel;
+        if (!kernel) {
+            document.getElementById('logBox').innerHTML = '❌ カーネルが見つかりません。このアプリは PaaOS 環境で実行してください。';
+            document.getElementById('installBtn').disabled = true;
+            return;
+        }
+
+        const logBox = document.getElementById('logBox');
+        const progressFill = document.getElementById('progressFill');
+        const installBtn = document.getElementById('installBtn');
+        const autoRootCheck = document.getElementById('autoRootCheck');
+
+        // ログ出力関数
+        function log(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = 'status-line' + (type === 'error' ? ' error' : type === 'success' ? ' success' : '');
+            line.textContent = message;
+            logBox.appendChild(line);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function setProgress(percent) {
+            progressFill.style.width = Math.min(100, percent) + '%';
+        }
+
+        // ディレクトリ存在確認
+        async function dirExists(pathArray) {
+            try {
+                let dir = kernel.root;
+                for (const part of pathArray) {
+                    dir = await dir.getDirectoryHandle(part);
+                }
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        // ファイル存在確認
+        async function fileExists(pathArray, fileName) {
+            try {
+                let dir = kernel.root;
+                for (const part of pathArray) {
+                    dir = await dir.getDirectoryHandle(part);
+                }
+                await dir.getFileHandle(fileName);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        // ファイル書き込み (バイナリ or テキスト)
+        async function writeFile(pathArray, fileName, content, isBinary = false) {
+            let dir = kernel.root;
+            for (const part of pathArray) {
+                dir = await dir.getDirectoryHandle(part, { create: true });
+            }
+            const fileHandle = await dir.getFileHandle(fileName, { create: true });
+            const writable = await fileHandle.createWritable();
+            if (isBinary) {
+                await writable.write(content);
+            } else {
+                await writable.write(content);
+            }
+            await writable.close();
+        }
+
+        // ディレクトリ作成（再帰的）
+        async function createDirectory(pathArray) {
+            let dir = kernel.root;
+            for (const part of pathArray) {
+                dir = await dir.getDirectoryHandle(part, { create: true });
+            }
+            return dir;
+        }
+
+        // アイコン生成 (canvas → PNG)
+        function generateIcon() {
             const canvas = document.createElement('canvas');
             canvas.width = 256;
             canvas.height = 256;
             const ctx = canvas.getContext('2d');
-            // 白背景
-            ctx.fillStyle = '#ffffff';
+
+            // 背景
+            const grad = ctx.createLinearGradient(0, 0, 256, 256);
+            grad.addColorStop(0, '#1a1a2e');
+            grad.addColorStop(1, '#16213e');
+            ctx.fillStyle = grad;
             ctx.fillRect(0, 0, 256, 256);
-            // テキスト描画
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 48px -apple-system, sans-serif';
+
+            // 枠
+            ctx.strokeStyle = '#ff3e3e';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(20, 20, 216, 216);
+
+            // テキスト
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            const lines = text.split('\n');
-            const lineHeight = 60;
-            const startY = 128 - (lines.length - 1) * lineHeight / 2;
-            lines.forEach((line, i) => {
-                ctx.fillText(line, 128, startY + i * lineHeight);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 48px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText('Root', 128, 100);
+            ctx.font = 'bold 36px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillStyle = '#ff3e3e';
+            ctx.fillText('Manager', 128, 160);
+
+            // 小さなシンボル
+            ctx.font = '50px sans-serif';
+            ctx.fillStyle = '#ffaa00';
+            ctx.fillText('⚙', 128, 225);
+
+            return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        // RootManager の index.html 内容
+        function getRootManagerHTML() {
+            return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Root Manager</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; background: #0d0d0d; color: #eee; margin:0; }
+        .card { background: #1a1a1a; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #333; }
+        h2 { margin-top: 0; color: #ff3e3e; }
+        .btn { background: #ff3e3e; border: none; color: #fff; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; }
+        .btn:active { transform: scale(0.95); }
+        .btn.secondary { background: #444; }
+        .input-row { display: flex; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
+        input, textarea { background: #222; border: 1px solid #444; color: #eee; padding: 8px 12px; border-radius: 8px; flex: 1; min-width: 100px; }
+        .log-area { background: #111; border-radius: 8px; padding: 10px; max-height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap; }
+        .flex { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .badge { background: #ff3e3e; padding: 2px 10px; border-radius: 20px; font-size: 12px; }
+        .status { padding: 4px 12px; border-radius: 20px; font-size: 12px; display: inline-block; }
+        .status.on { background: #4CAF50; color: #fff; }
+        .status.off { background: #666; color: #fff; }
+    </style>
+</head>
+<body>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h1 style="color:#ff3e3e;">⚙ Root Manager</h1>
+        <span id="rootBadge" class="badge">🔒 通常</span>
+    </div>
+
+    <div class="card">
+        <h2>🔑 ルート権限</h2>
+        <div class="flex">
+            <span>状態: <span id="rootStatus" class="status off">未取得</span></span>
+            <button class="btn" id="getRootBtn">ルート権限を取得</button>
+            <button class="btn secondary" id="releaseRootBtn">解放</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📂 ディレクトリ操作</h2>
+        <div class="input-row">
+            <input id="pathInput" placeholder="/apps" value="/">
+            <button class="btn secondary" id="listBtn">一覧表示</button>
+        </div>
+        <div id="dirList" style="max-height:150px; overflow-y:auto; background:#111; border-radius:8px; padding:8px; font-family:monospace; font-size:12px;"></div>
+    </div>
+
+    <div class="card">
+        <h2>📄 ファイル操作</h2>
+        <div class="input-row">
+            <input id="filePath" placeholder="ファイルパス (例: /system/config.json)">
+            <button class="btn secondary" id="readBtn">読み取り</button>
+        </div>
+        <textarea id="fileContent" rows="4" placeholder="ファイル内容" style="width:100%; background:#222; border:1px solid #444; color:#eee; padding:8px; border-radius:8px;"></textarea>
+        <div class="input-row" style="margin-top:8px;">
+            <input id="saveFilePath" placeholder="保存先パス">
+            <button class="btn secondary" id="saveBtn">保存 (上書き)</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🎨 外観カスタマイズ</h2>
+        <div class="input-row">
+            <label>アクセントカラー: <input type="color" id="accentColor" value="#ff3e3e"></label>
+            <button class="btn secondary" id="applyThemeBtn">適用</button>
+        </div>
+        <div class="input-row">
+            <label>テーマ: 
+                <select id="themeSelect">
+                    <option value="dark">ダーク</option>
+                    <option value="light">ライト</option>
+                </select>
+            </label>
+            <button class="btn secondary" id="applyThemeFullBtn">テーマ適用</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📋 システム情報</h2>
+        <button class="btn secondary" id="sysInfoBtn">取得</button>
+        <div id="sysInfo" style="font-size:12px; opacity:0.7; margin-top:8px;"></div>
+    </div>
+
+    <div style="margin-top:16px; font-size:11px; opacity:0.5; text-align:center;">RootManager v1.0 — PaaOS Future</div>
+
+    <script>
+        const kernel = window.parent.kernel;
+        let isRooted = false;
+
+        function updateRootUI() {
+            const badge = document.getElementById('rootBadge');
+            const status = document.getElementById('rootStatus');
+            if (isRooted) {
+                badge.textContent = '👑 ルート';
+                status.textContent = '取得済み';
+                status.className = 'status on';
+            } else {
+                badge.textContent = '🔒 通常';
+                status.textContent = '未取得';
+                status.className = 'status off';
+            }
+        }
+
+        // ルート権限取得
+        document.getElementById('getRootBtn').onclick = async () => {
+            // GATISK_EXPLOIT を利用（確認ダイアログ表示）
+            const result = await new Promise(resolve => {
+                const handler = (e) => {
+                    if (e.data.type === 'ROOT_EXPLOIT_RESULT') {
+                        window.removeEventListener('message', handler);
+                        resolve(e.data.success);
+                    }
+                };
+                window.addEventListener('message', handler);
+                window.parent.postMessage({ action: 'GATISK_EXPLOIT' }, '*');
+                setTimeout(() => {
+                    window.removeEventListener('message', handler);
+                    resolve(false);
+                }, 30000);
             });
-            canvas.toBlob(resolve, 'image/png');
-        });
-    }
-
-    // ========== AutoRoot モジュール作成 ==========
-    async createAutoRootModule(addLog) {
-        // manifest.json
-        const manifest = {
-            name: 'AutoRoot',
-            version: '1.0',
-            description: '起動時に自動で Root 権限を有効化するモジュール',
-            priority: 100,
-            enabled: true
+            if (result) {
+                isRooted = true;
+                updateRootUI();
+                alert('ルート権限を取得しました。');
+            } else {
+                alert('ルート権限の取得に失敗または拒否されました。');
+            }
         };
-        // module.js
-        const moduleJs = `
-// AutoRoot モジュール
-kernel.isRooted = true;
-document.getElementById('root-indicator').style.display = 'inline';
-console.log('[AutoRoot] Root 権限を自動で有効化しました。');
-// 初期化処理（オプション）
-exports.init = function() {
-    kernel.showOSPopup('AutoRoot', 'Root 権限が自動で有効化されました。');
-};
-// クリーンアップ（オプション）
-exports.cleanup = function() {
-    console.log('[AutoRoot] クリーンアップ');
-};
-`;
-        // ZIP 生成
-        const zip = new JSZip();
-        zip.file('manifest.json', JSON.stringify(manifest, null, 2));
-        zip.file('module.js', moduleJs);
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
 
-        // system/modules ディレクトリに保存
-        const sysDir = await this.root.getDirectoryHandle('system', { create: true });
-        const modDir = await sysDir.getDirectoryHandle('modules', { create: true });
-        const modFile = await modDir.getFileHandle('AutoRoot.modpaa', { create: true });
-        const writable = await modFile.createWritable();
-        await writable.write(zipBlob);
-        await writable.close();
-        addLog('✅ AutoRoot.modpaa を system/modules/ に保存しました');
-    }
+        document.getElementById('releaseRootBtn').onclick = () => {
+            isRooted = false;
+            updateRootUI();
+            alert('ルート権限を解放しました。（実際にはOS側の状態は変わりません）');
+        };
 
-    // その他の既存メソッドは省略（実際のコードでは完全に含まれます）
-    // ここでは、上記の追加部分のみを記述し、残りはオリジナルのコードと同一です。
-}
+        // ディレクトリ一覧
+        document.getElementById('listBtn').onclick = async () => {
+            const path = document.getElementById('pathInput').value.trim() || '/';
+            const parts = path.split('/').filter(p => p);
+            try {
+                let dir = kernel.root;
+                for (const p of parts) dir = await dir.getDirectoryHandle(p);
+                let entries = [];
+                for await (const entry of dir.values()) {
+                    entries.push(entry.kind === 'directory' ? '📁 ' + entry.name : '📄 ' + entry.name);
+                }
+                document.getElementById('dirList').textContent = entries.join('\\n') || '(空)';
+            } catch(e) {
+                document.getElementById('dirList').textContent = '❌ エラー: ' + e.message;
+            }
+        };
 
-// ============================================================
-//  既存のカーネルインスタンス化と拡張（変更なし）
-// ============================================================
-const kernel = new PaaOS_Kernel();
+        // ファイル読み取り
+        document.getElementById('readBtn').onclick = async () => {
+            const path = document.getElementById('filePath').value.trim();
+            if (!path) { alert('パスを入力してください'); return; }
+            const parts = path.split('/').filter(p => p);
+            const fileName = parts.pop();
+            try {
+                let dir = kernel.root;
+                for (const p of parts) dir = await dir.getDirectoryHandle(p);
+                const file = await dir.getFileHandle(fileName);
+                const blob = await file.getFile();
+                const text = await blob.text();
+                document.getElementById('fileContent').value = text;
+            } catch(e) {
+                document.getElementById('fileContent').value = '❌ エラー: ' + e.message;
+            }
+        };
 
-// その他の拡張（システム統計、モジュールシステム等）はそのまま
-// ただし、ここでは省略していますが、実際のファイルには全て含まれます。
+        // ファイル保存（上書き）
+        document.getElementById('saveBtn').onclick = async () => {
+            const path = document.getElementById('saveFilePath').value.trim();
+            if (!path) { alert('保存先パスを入力してください'); return; }
+            const content = document.getElementById('fileContent').value;
+            const parts = path.split('/').filter(p => p);
+            const fileName = parts.pop();
+            try {
+                let dir = kernel.root;
+                for (const p of parts) dir = await dir.getDirectoryHandle(p);
+                const fileHandle = await dir.getFileHandle(fileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(content);
+                await writable.close();
+                alert('保存しました。');
+            } catch(e) {
+                alert('保存エラー: ' + e.message);
+            }
+        };
 
+        // アクセントカラー適用（即時）
+        document.getElementById('applyThemeBtn').onclick = () => {
+            const color = document.getElementById('accentColor').value;
+            document.documentElement.style.setProperty('--accent', color);
+            // システム全体にも適用（カーネル設定に反映させる場合は別途）
+            window.parent.document.documentElement.style.setProperty('--accent', color);
+            // 実際に保存する場合は kernel.saveConfig() などが必要
+        };
+
+        // テーマ適用（ライト/ダーク）
+        document.getElementById('applyThemeFullBtn').onclick = async () => {
+            const theme = document.getElementById('themeSelect').value;
+            // カーネル設定を変更
+            if (kernel.config) {
+                kernel.config.theme = theme;
+                kernel.applyTheme();
+                await kernel.saveConfig();
+                alert('テーマを ' + theme + ' に変更しました。');
+            } else {
+                alert('カーネル設定にアクセスできません。');
+            }
+        };
+
+        // システム情報
+        document.getElementById('sysInfoBtn').onclick = async () => {
+            const stats = kernel.getSystemStats ? kernel.getSystemStats() : null;
+            if (stats) {
+                document.getElementById('sysInfo').textContent = 
+                    '稼働時間: ' + Math.floor(stats.uptime / 60000) + '分 | アプリ数: ' + stats.totalApps +
+                    ' | 実行中: ' + stats.runningApps.length + ' | ルート: ' + (stats.isRooted ? 'あり' : 'なし');
+            } else {
+                document.getElementById('sysInfo').textContent = '情報を取得できません。';
+            }
+        };
+
+        // 初期化
+        (async () => {
+            // ルート状態チェック
+            try {
+                const status = await new Promise(resolve => {
+                    const handler = (e) => {
+                        if (e.data.type === 'ROOT_STATUS_RESULT') {
+                            window.removeEventListener('message', handler);
+                            resolve(e.data.isRooted);
+                        }
+                    };
+                    window.addEventListener('message', handler);
+                    window.parent.postMessage({ action: 'CHECK_ROOT_STATUS' }, '*');
+                    setTimeout(() => {
+                        window.removeEventListener('message', handler);
+                        resolve(false);
+                    }, 2000);
+                });
+                isRooted = status;
+                updateRootUI();
+            } catch(e) {}
+        })();
+    </script>
+</body>
+</html>`;
+        }
+
+        // インストール処理
+        installBtn.onclick = async () => {
+            installBtn.disabled = true;
+            logBox.innerHTML = '';
+            setProgress(0);
+            const autoRoot = autoRootCheck.checked;
+
+            try {
+                // 1. 既存チェック
+                log('🔍 既存の RootManager をチェック中...');
+                const exists = await dirExists(['apps', 'RootManager']);
+                if (exists) {
+                    log('⚠️ apps/RootManager は既に存在します。上書きインストールします。', 'error');
+                }
+
+                // 2. ディレクトリ作成
+                log('📁 apps/RootManager ディレクトリを作成...');
+                await createDirectory(['apps', 'RootManager']);
+                log('✅ ディレクトリ作成完了', 'success');
+                setProgress(20);
+
+                // 3. index.html 作成
+                log('📄 index.html を作成...');
+                const htmlContent = getRootManagerHTML();
+                await writeFile(['apps', 'RootManager'], 'index.html', htmlContent);
+                log('✅ index.html 作成完了', 'success');
+                setProgress(40);
+
+                // 4. icon.png 生成 & 保存
+                log('🖼️ icon.png を生成...');
+                const iconBlob = await generateIcon();
+                const iconArrayBuffer = await iconBlob.arrayBuffer();
+                await writeFile(['apps', 'RootManager'], 'icon.png', iconArrayBuffer, true);
+                log('✅ icon.png 保存完了', 'success');
+                setProgress(60);
+
+                // 5. ファイル存在確認
+                const fileOk = await fileExists(['apps', 'RootManager'], 'index.html') && await fileExists(['apps', 'RootManager'], 'icon.png');
+                if (!fileOk) {
+                    throw new Error('ファイル作成後の確認に失敗しました。');
+                }
+                log('✅ ファイル検証完了', 'success');
+                setProgress(70);
+
+                // 6. AutoRoot モジュール
+                if (autoRoot) {
+                    log('🧩 AutoRoot モジュールをインストール...');
+                    // モジュールディレクトリ作成
+                    await createDirectory(['system', 'modules']);
+
+                    // マニフェスト
+                    const manifest = {
+                        name: 'AutoRoot',
+                        version: '1.0',
+                        description: '起動時に自動でルート権限を取得します',
+                        priority: 100,
+                        enabled: true
+                    };
+                    const moduleJs = `
+                        // AutoRoot モジュール
+                        export default {
+                            init: async function(kernel, api) {
+                                // ルート権限取得（確認ダイアログを表示せずに強制取得）
+                                // 注意: これは OS の内部動作に依存します
+                                try {
+                                    // GATISK_EXPLOIT を直接呼び出し（確認なし）
+                                    // ただし、通常は確認が必要なので、ここでは直接 isRooted を true にする
+                                    // 実際の OS では isRooted はセッターがないので、この方法は簡易的
+                                    // 代わりに、内部フラグを操作する方法をとる（ただし OS の実装に依存）
+                                    // ここでは、kernel.isRooted を true に設定する（カーネルに直接アクセス）
+                                    kernel.isRooted = true;
+                                    // 表示更新
+                                    const indicator = document.getElementById('root-indicator');
+                                    if (indicator) indicator.style.display = 'inline';
+                                    api.notify('AutoRoot', 'ルート権限を自動取得しました。');
+                                    console.log('[AutoRoot] Root enabled.');
+                                } catch(e) {
+                                    console.error('[AutoRoot] Error:', e);
+                                }
+                            },
+                            cleanup: function() {
+                                console.log('[AutoRoot] Cleanup');
+                            }
+                        };
+                    `;
+
+                    // zip 作成
+                    const zip = new window.parent.JSZip();
+                    zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+                    zip.file('module.js', moduleJs);
+                    const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+                    // system/modules/AutoRoot.modpaa に保存
+                    const modpaaData = await zipBlob.arrayBuffer();
+                    await writeFile(['system', 'modules'], 'AutoRoot.modpaa', modpaaData, true);
+                    log('✅ AutoRoot.modpaa 保存完了', 'success');
+                    setProgress(95);
+                } else {
+                    log('⏭️ AutoRoot はスキップされました。', 'info');
+                }
+
+                // 完了
+                setProgress(100);
+                log('🎉 インストールが完了しました！', 'success');
+                log('📱 RootManager がホーム画面に追加されました。再起動またはアプリ一覧から起動してください。', 'info');
+
+            } catch (err) {
+                log('❌ エラーが発生しました: ' + err.message, 'error');
+                console.error(err);
+            } finally {
+                installBtn.disabled = false;
+            }
+        };
+
+        // 初期ログ
+        log('📌 RootManagerInstaller を起動しました。');
+        log('ℹ️ 「インストール開始」を押すと RootManager アプリを構築します。');
+        log('   オプションで AutoRoot モジュールもインストール可能です。');
+    })();
 </script>
 </body>
 </html>
