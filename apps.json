@@ -131,6 +131,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "root-status-tweaker",
+      "name": "root-status-tweaker",
+      "description": "ステータスバーのカスタマイズ",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/root-status-tweaker/icon.png",
+      "basePath": "apps/root-status-tweaker/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
