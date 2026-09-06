@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PaaOS Root Tweaker</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a1a2f;
+            color: #fff;
+            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 320px;
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            color: #7abfff;
+            margin: 0 0 20px 0;
+            text-align: center;
+        }
+        .status-preview {
+            background: #000;
+            border-radius: 16px;
+            padding: 12px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            transition: transform 0.1s;
+        }
+        .label {
+            font-size: 12px;
+            opacity: 0.6;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+        .input-group {
+            margin-bottom: 18px;
+        }
+        .input-group input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-group input[type="text"]:focus {
+            border-color: #0078d7;
+        }
+        .input-group input[type="range"] {
+            width: 100%;
+            margin: 8px 0;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: #333;
+            outline: none;
+        }
+        .input-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #0078d7;
+            cursor: pointer;
+            border: 2px solid #0078d7;
+            box-shadow: 0 0 20px rgba(0,120,215,0.3);
+        }
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            opacity: 0.4;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s, opacity 0.2s;
+            text-align: center;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .btn-primary {
+            background: #0078d7;
+            color: #fff;
+        }
+        .btn-primary:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .btn-danger {
+            background: rgba(255,60,60,0.2);
+            color: #ff6b6b;
+            border: 1px solid rgba(255,60,60,0.3);
+        }
+        .btn-success {
+            background: rgba(76,175,80,0.2);
+            color: #4CAF50;
+            border: 1px solid rgba(76,175,80,0.3);
+        }
+        .msg {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            text-align: center;
+            display: none;
+        }
+        .msg.show {
+            display: block;
+        }
+        .msg.success {
+            background: rgba(76,175,80,0.15);
+            color: #4CAF50;
+        }
+        .msg.error {
+            background: rgba(255,60,60,0.15);
+            color: #ff6b6b;
+        }
+        .status-badge {
+            font-size: 11px;
+            padding: 4px 12px;
+            border-radius: 30px;
+            background: rgba(255,60,60,0.2);
+            color: #ff6b6b;
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+        .status-badge.active {
+            background: rgba(76,175,80,0.2);
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>⚙️ Root Tweaker</h1>
+
+    <div id="root-status" class="status-badge">🔒 ルート未取得</div>
+
+    <!-- プレビュー -->
+    <div class="status-preview" id="status-preview">
+        <span id="preview-clock">12:34</span>
+        <div style="display:flex; gap:8px;" id="preview-status-text">
+            <span id="preview-root" style="color:var(--accent); display:none;">#</span>
+            <span id="preview-future">Future</span>
+            <span id="preview-version">2.5</span>
+        </div>
+    </div>
+
+    <!-- テキスト変更 -->
+    <div class="input-group">
+        <div class="label">📝 ステータスバー左側（Future）</div>
+        <input type="text" id="status-left" value="Future" placeholder="例: Future">
+    </div>
+
+    <div class="input-group">
+        <div class="label">📝 ステータスバー右側（バージョン）</div>
+        <input type="text" id="status-right" value="2.5" placeholder="例: 2.5">
+    </div>
+
+    <!-- スライダー（横移動） -->
+    <div class="input-group">
+        <div class="label">↔ ステータスバー横移動</div>
+        <input type="range" id="position-slider" min="-50" max="50" value="0">
+        <div class="range-labels">
+            <span>← 左</span>
+            <span id="position-value">0px</span>
+            <span>右 →</span>
+        </div>
+    </div>
+
+    <!-- ボタン -->
+    <div class="btn-group">
+        <button class="btn btn-primary" id="apply-btn">適用</button>
+        <button class="btn btn-danger" id="reset-btn">リセット</button>
+    </div>
+
+    <!-- ルート取得ボタン（初回のみ） -->
+    <div class="btn-group" style="margin-top:8px;">
+        <button class="btn btn-success" id="root-btn">🔑 ルート権限を取得</button>
+    </div>
+
+    <div id="message" class="msg"></div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // ---- DOM ----
+    const rootStatus = document.getElementById('root-status');
+    const previewClock = document.getElementById('preview-clock');
+    const previewRoot = document.getElementById('preview-root');
+    const previewFuture = document.getElementById('preview-future');
+    const previewVersion = document.getElementById('preview-version');
+    const statusLeft = document.getElementById('status-left');
+    const statusRight = document.getElementById('status-right');
+    const positionSlider = document.getElementById('position-slider');
+    const positionValue = document.getElementById('position-value');
+    const applyBtn = document.getElementById('apply-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const rootBtn = document.getElementById('root-btn');
+    const msgEl = document.getElementById('message');
+
+    let isRooted = false;
+    let originalLeft = 'Future';
+    let originalRight = '2.5';
+    let currentLeft = 'Future';
+    let currentRight = '2.5';
+    let currentPosition = 0;
+
+    // ---- メッセージ ----
+    function showMessage(text, type = 'success') {
+        msgEl.textContent = text;
+        msgEl.className = 'msg show ' + type;
+        setTimeout(() => {
+            msgEl.className = 'msg';
+        }, 4000);
+    }
+
+    // ---- ルート権限チェック ----
+    function checkRoot() {
+        window.parent.postMessage({
+            action: 'CHECK_ROOT_STATUS'
+        }, '*');
+    }
+
+    // ---- ルート権限取得 ----
+    function requestRoot() {
+        window.parent.postMessage({
+            action: 'GATISK_EXPLOIT'
+        }, '*');
+        showMessage('ルート権限を要求中...', 'success');
+    }
+
+    // ---- ステータスバー更新（実際のOSへ） ----
+    function applyChanges() {
+        if (!isRooted) {
+            showMessage('⚠️ ルート権限が必要です', 'error');
+            return;
+        }
+
+        const left = statusLeft.value.trim() || 'Future';
+        const right = statusRight.value.trim() || '2.5';
+        const pos = parseInt(positionSlider.value);
+
+        currentLeft = left;
+        currentRight = right;
+        currentPosition = pos;
+
+        // プレビュー更新
+        previewFuture.textContent = left;
+        previewVersion.textContent = right;
+
+        // スライダー値表示
+        positionValue.textContent = pos + 'px';
+
+        // ★★★ OSのステータスバーを直接操作（KERNEL_EXEC） ★★★
+        // 1. テキスト変更
+        window.parent.postMessage({
+            action: 'KERNEL_EXEC',
+            func: '_updateStatusBarText',
+            args: [left, right]
+        }, '*');
+
+        // 2. 横移動（CSS transform）
+        window.parent.postMessage({
+            action: 'KERNEL_EXEC',
+            func: '_moveStatusBar',
+            args: [pos]
+        }, '*');
+
+        showMessage(`✅ 適用: ${left} ${right} / 位置 ${pos}px`, 'success');
+    }
+
+    // ---- リセット ----
+    function resetChanges() {
+        if (!isRooted) {
+            showMessage('⚠️ ルート権限が必要です', 'error');
+            return;
+        }
+
+        statusLeft.value = originalLeft;
+        statusRight.value = originalRight;
+        positionSlider.value = 0;
+        positionValue.textContent = '0px';
+
+        currentLeft = originalLeft;
+        currentRight = originalRight;
+        currentPosition = 0;
+
+        previewFuture.textContent = originalLeft;
+        previewVersion.textContent = originalRight;
+
+        window.parent.postMessage({
+            action: 'KERNEL_EXEC',
+            func: '_updateStatusBarText',
+            args: [originalLeft, originalRight]
+        }, '*');
+
+        window.parent.postMessage({
+            action: 'KERNEL_EXEC',
+            func: '_moveStatusBar',
+            args: [0]
+        }, '*');
+
+        showMessage('🔄 リセットしました', 'success');
+    }
+
+    // ---- スライダー連動 ----
+    positionSlider.addEventListener('input', function() {
+        const val = this.value;
+        positionValue.textContent = val + 'px';
+        previewClock.style.transform = `translateX(${val}px)`;
+        previewRoot.style.transform = `translateX(${val}px)`;
+        previewFuture.style.transform = `translateX(${val}px)`;
+        previewVersion.style.transform = `translateX(${val}px)`;
+    });
+
+    // ---- イベント ----
+    applyBtn.addEventListener('click', applyChanges);
+    resetBtn.addEventListener('click', resetChanges);
+
+    rootBtn.addEventListener('click', function() {
+        if (isRooted) {
+            showMessage('✅ すでにルート権限を取得しています', 'success');
+            return;
+        }
+        requestRoot();
+    });
+
+    // ---- 親OSからのメッセージ受信 ----
+    window.addEventListener('message', function(e) {
+        const data = e.data;
+
+        // ルートステータス
+        if (data.type === 'ROOT_STATUS_RESULT') {
+            isRooted = data.isRooted;
+            if (isRooted) {
+                rootStatus.textContent = '✅ ルート権限 取得済み';
+                rootStatus.className = 'status-badge active';
+                rootBtn.textContent = '✅ ルート済み';
+                rootBtn.disabled = true;
+                showMessage('✅ ルート権限を取得しました', 'success');
+            } else {
+                rootStatus.textContent = '🔒 ルート未取得';
+                rootStatus.className = 'status-badge';
+                rootBtn.textContent = '🔑 ルート権限を取得';
+                rootBtn.disabled = false;
+            }
+            return;
+        }
+
+        // ルート権限取得結果（GATISK_EXPLOIT）
+        if (data.type === 'ROOT_EXPLOIT_RESULT') {
+            if (data.success) {
+                isRooted = true;
+                rootStatus.textContent = '✅ ルート権限 取得済み';
+                rootStatus.className = 'status-badge active';
+                rootBtn.textContent = '✅ ルート済み';
+                rootBtn.disabled = true;
+                showMessage('✅ ルート権限の取得に成功しました！', 'success');
+                // 初期状態をOSから取得
+                fetchCurrentStatus();
+            } else {
+                showMessage('❌ ルート権限の取得が拒否されました', 'error');
+            }
+            return;
+        }
+
+        // 現在のステータスバー情報
+        if (data.type === 'STATUS_BAR_INFO') {
+            if (data.left) statusLeft.value = data.left;
+            if (data.right) statusRight.value = data.right;
+            if (data.position !== undefined) {
+                positionSlider.value = data.position;
+                positionValue.textContent = data.position + 'px';
+            }
+            previewFuture.textContent = data.left || 'Future';
+            previewVersion.textContent = data.right || '2.5';
+        }
+    });
+
+    // ---- 現在の状態を取得 ----
+    function fetchCurrentStatus() {
+        if (!isRooted) return;
+        window.parent.postMessage({
+            action: 'KERNEL_EXEC',
+            func: '_getStatusBarInfo'
+        }, '*');
+    }
+
+    // ---- 初期化 ----
+    // まずルートステータスを確認
+    checkRoot();
+
+    // プレビューの時計を更新
+    function updateClock() {
+        const d = new Date();
+        const time = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+        previewClock.textContent = time;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // スライダー初期表示
+    positionValue.textContent = '0px';
+
+})();
+</script>
+</body>
+</html>
