@@ -107,6 +107,18 @@
         "index.html",
         "icon.png"
       ]
+    },
+    {
+      "id": "uicustomizer",
+      "name": "uicustomizer",
+      "description": "",
+      "version": "1.0.0",
+      "icon": "https://raw.githubusercontent.com/PaaPaaSeizin/paaosstore/main/apps/uicustomizer/icon.png",
+      "basePath": "apps/uicustomizer/",
+      "files": [
+        "index.html",
+        "icon.png"
+      ]
     }
   ]
 }
