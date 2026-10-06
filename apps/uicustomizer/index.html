@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>UIカスタマイザ</title>
+<style>
+:root{
+  --bg:var(--win-bg,#fff);--fg:var(--text-dark,#000);
+  --accent:var(--accent,#ff3e3e);
+  --border:rgba(128,128,128,.25);
+  --s1:rgba(128,128,128,.08);--s2:rgba(128,128,128,.16);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,'Segoe UI','Noto Sans JP',sans-serif;font-size:14px;
+  overflow:hidden;user-select:none;-webkit-user-select:none}
+input[type=text],input[type=color],textarea{user-select:text;-webkit-user-select:text}
+#app{display:flex;flex-direction:column;height:100%}
+
+/* ヘッダー */
+#head{padding:10px 14px;border-bottom:.5px solid var(--border);
+  display:flex;align-items:center;gap:8px;flex-shrink:0}
+#head h1{margin:0;font-size:15px;flex:1}
+#rb{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;
+  background:rgba(76,175,80,.15);color:#4CAF50}
+#rb.no{background:rgba(255,60,60,.15);color:#ff3e3e}
+
+/* タブ・チップ */
+.scrollX{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;flex-shrink:0;
+  border-bottom:.5px solid var(--border);scrollbar-width:none}
+.scrollX::-webkit-scrollbar{display:none}
+.tab{padding:6px 12px;border-radius:14px;font-size:11px;white-space:nowrap;
+  border:1px solid var(--border);background:var(--s1);color:inherit;
+  cursor:pointer;flex-shrink:0;font-family:inherit}
+.tab.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chip{padding:6px 11px;border-radius:14px;font-size:11px;font-family:monospace;
+  border:1px solid var(--border);background:var(--s1);color:inherit;
+  cursor:pointer;flex-shrink:0;white-space:nowrap;position:relative}
+.chip.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chip.has::after{content:'';position:absolute;top:2px;right:2px;
+  width:6px;height:6px;border-radius:50%;background:#4CAF50}
+.chip.sel.has::after{background:#fff}
+
+/* 本体 */
+#scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:40px}
+.sec{padding:14px 14px 4px}
+.sec-title{font-size:11px;font-weight:700;letter-spacing:.05em;opacity:.55;
+  text-transform:uppercase;padding:0 0 6px 2px}
+
+/* スライダー行 */
+.row{display:flex;align-items:center;gap:8px;padding:6px 0}
+.row .lbl{width:76px;font-size:11px;opacity:.75;flex-shrink:0}
+.row input[type=range]{flex:1;min-width:0;height:26px;-webkit-appearance:none;
+  background:transparent;cursor:pointer;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:5px;
+  background:var(--s2);border-radius:3px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;
+  width:20px;height:20px;border-radius:50%;background:var(--accent);
+  margin-top:-7.5px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+input[type=range]::-moz-range-track{height:5px;background:var(--s2);border-radius:3px}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;
+  border-radius:50%;background:var(--accent)}
+.row .val{width:52px;font-size:11px;font-family:monospace;text-align:right;
+  opacity:.85;flex-shrink:0;cursor:pointer}
+.row .clr{width:22px;height:22px;border-radius:50%;border:none;
+  background:var(--s2);color:inherit;font-size:10px;cursor:pointer;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-family:inherit}
+.row .clr.hide{visibility:hidden}
+
+/* 色 */
+.color-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+.color-row .lbl{width:76px;font-size:11px;opacity:.75;flex-shrink:0}
+input[type=color]{width:36px;height:30px;border:1px solid var(--border);
+  border-radius:8px;background:transparent;padding:0;cursor:pointer;-webkit-appearance:none}
+input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:5px}
+.color-hex{flex:1;min-width:0;padding:6px 10px;font-family:monospace;font-size:12px;
+  border:1px solid var(--border);border-radius:8px;background:var(--bg);
+  color:inherit;outline:none}
+.color-hex:focus{border-color:var(--accent)}
+.swatches{display:flex;gap:5px;flex-wrap:wrap;padding:4px 0 0}
+.sw{width:26px;height:26px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;flex-shrink:0}
+.sw.sel{border-color:var(--fg)}
+
+/* ボタン */
+.btn{padding:9px 14px;border-radius:10px;border:none;font-weight:600;
+  font-size:12px;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{background:var(--s2);color:inherit}
+.btn.danger{background:rgba(255,60,60,.85);color:#fff}
+.btn-row{display:flex;gap:8px;padding:14px}
+
+/* 未取得 */
+.np{padding:50px 22px;text-align:center}
+.np .ic{font-size:56px;margin-bottom:14px}
+.np h2{margin:0 0 8px;font-size:16px}
+.np p{font-size:12.5px;opacity:.7;line-height:1.7;margin:0 0 20px}
+
+.empty{padding:60px 20px;text-align:center;opacity:.5}
+
+/* トースト */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:rgba(0,0,0,.85);color:#fff;padding:10px 20px;border-radius:24px;
+  font-size:12.5px;opacity:0;transition:all .3s cubic-bezier(.16,1,.3,1);
+  z-index:9999;pointer-events:none;max-width:80%;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="head"><h1>🎨 UIカスタマイザ</h1><span id="rb" class="no">未取得</span></div>
+  <div class="scrollX" id="tabs"></div>
+  <div class="scrollX" id="chips"></div>
+  <div id="scroll"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ========== カーネル通信 ========== */
+const K = {
+  _seq:0,_pending:{},rooted:false,_onRoot:null,
+  init(){
+    window.addEventListener('message', e=>{
+      const d=e.data; if(!d||typeof d!=='object') return;
+      if(d.type==='ROOT_STATUS_RESULT'){
+        const was=this.rooted; this.rooted=!!d.isRooted;
+        if(was!==this.rooted && this._onRoot) this._onRoot(this.rooted);
+        return;
+      }
+      if(d.type==='UI_OVERRIDE_RESULT' && d.__req!=null){
+        const cb=this._pending[d.__req];
+        if(cb){ delete this._pending[d.__req]; cb(d); }
+      }
+    });
+    this.send({action:'CHECK_ROOT_STATUS'});
+  },
+  send(p){ try{ window.parent.postMessage(Object.assign({appId:'uicustomizer'},p),'*'); }catch(_){} },
+  call(p,t=3000){
+    return new Promise(res=>{
+      const id=++this._seq; this._pending[id]=res;
+      this.send(Object.assign({__req:id},p));
+      setTimeout(()=>{ if(this._pending[id]){ delete this._pending[id]; res({ok:false,error:'timeout'}); } },t);
+    });
+  },
+  getOverrides(){ return this.call({action:'UI_OVERRIDE_GET'}); },
+  set(partId,prop,value){ return this.call({action:'UI_OVERRIDE_SET',partId,prop,value}); },
+  reset(partId){ return this.call({action:'UI_OVERRIDE_RESET',partId}); },
+  reqRoot(){ this.send({action:'GATISK_EXPLOIT'}); }
+};
+
+/* ========== パーツ定義 ========== */
+const GROUPS = {
+  'ステータス':[
+    ['status.bar','全体'],['status.left','左半分'],['status.right','右半分'],
+    ['status.clock','時計'],['status.right.group','右グループ'],
+    ['status.root','Root #'],['status.playing','再生中']
+  ],
+  'ホームバー':[['homebar.container','コンテナ'],['homebar.bar','バー']],
+  'Dock':[
+    ['dock','全体'],['dock.item','アイコン'],
+    ['dock.sibling.edit','編集ボタン'],['dock.sibling.drawer','一覧ボタン']
+  ],
+  'アイコン':[
+    ['desktop.icon','アイコン'],['desktop.icon.box','枠'],['desktop.icon.label','ラベル']
+  ],
+  'ロック':[
+    ['lock.screen','画面'],['lock.clock','時計'],
+    ['lock.slider','スライダー'],['lock.track','トラック文字'],['lock.handle','ハンドル']
+  ],
+  'パネル':[
+    ['panel.quick','クイック'],['panel.notification','通知'],
+    ['panel.quick.item','項目'],['panel.quick.icon','アイコン']
+  ],
+  'スイッチャー':[
+    ['switcher','全体'],['switcher.card','カード'],
+    ['switcher.header','ヘッダー'],['switcher.body','サムネ']
+  ],
+};
+
+/* ========== スライダー定義 ==========
+   key  : config.uiOverrides[part] に保存するプロパティ名（CSSそのまま）
+   def  : 中央/初期値
+   min/max/step/unit
+   0 のとき '' を送って消す（auto化したいもの）→ clearAtZero:true
+*/
+const SLIDERS = [
+  // 位置（transform: translate を使う）
+  {sec:'位置', key:'translate.x', prop:'transform', label:'横(X)',
+   min:-150, max:150, step:1, def:0, unit:'px', isTransform:true},
+  {sec:'位置', key:'translate.y', prop:'transform', label:'縦(Y)',
+   min:-150, max:150, step:1, def:0, unit:'px', isTransform:true},
+  {sec:'位置', key:'rotate',   prop:'rotate', label:'回転',
+   min:-180, max:180, step:1, def:0, unit:'deg', clearAtZero:true},
+  {sec:'位置', key:'scale',    prop:'scale',  label:'拡大',
+   min:0.3, max:2,   step:0.05, def:1, unit:'', clearAtDef:true},
+  {sec:'位置', key:'z-index',  prop:'z-index',label:'重なり',
+   min:0, max:999,   step:1, def:0, unit:'', clearAtZero:true},
+
+  // サイズ
+  {sec:'サイズ', key:'width',        prop:'width',label:'幅',
+   min:0, max:400, step:1, def:0, unit:'px', clearAtZero:true},
+  {sec:'サイズ', key:'height',       prop:'height',label:'高さ',
+   min:0, max:400, step:1, def:0, unit:'px', clearAtZero:true},
+  {sec:'サイズ', key:'padding',      prop:'padding',label:'内余白',
+   min:0, max:40,  step:1, def:0, unit:'px', clearAtZero:true},
+  {sec:'サイズ', key:'margin',       prop:'margin',label:'外余白',
+   min:-40, max:40,step:1, def:0, unit:'px', clearAtZero:true},
+  {sec:'サイズ', key:'border-radius',prop:'border-radius',label:'角丸',
+   min:0, max:80,  step:1, def:0, unit:'px', clearAtZero:true},
+
+  // 文字
+  {sec:'文字', key:'font-size',     prop:'font-size',label:'サイズ',
+   min:6, max:48,  step:0.5, def:14, unit:'px', clearAtZero:true},
+  {sec:'文字', key:'font-weight',   prop:'font-weight',label:'太さ',
+   min:100, max:900, step:100, def:400, unit:'', clearAtZero:false, isWeight:true},
+  {sec:'文字', key:'letter-spacing',prop:'letter-spacing',label:'字間',
+   min:-5, max:20, step:0.5, def:0, unit:'px', clearAtZero:true},
+  {sec:'文字', key:'line-height',   prop:'line-height',label:'行間',
+   min:0.5, max:3, step:0.1, def:1.2, unit:'', clearAtZero:false, clearAtDef:true},
+
+  // 効果
+  {sec:'効果', key:'opacity', prop:'opacity',label:'不透明',
+   min:0, max:1, step:0.05, def:1, unit:'', clearAtDef:true},
+];
+
+/* ========== 状態 ========== */
+const state = {
+  rooted:false, overrides:{},
+  group:'ステータス', part:null,
+  // アプリ内で transform を組み立てるためのローカル値
+  tf:{x:0,y:0}
+};
+
+const $tabs=document.getElementById('tabs');
+const $chips=document.getElementById('chips');
+const $scroll=document.getElementById('scroll');
+const $rb=document.getElementById('rb');
+const $toast=document.getElementById('toast');
+
+/* ========== ユーティリティ ========== */
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+let tT; function toast(m){$toast.textContent=m;$toast.classList.add('show');
+  clearTimeout(tT);tT=setTimeout(()=>$toast.classList.remove('show'),1500);}
+function numOf(v){ if(v==null)return null; const m=String(v).match(/-?\d+(\.\d+)?/); return m?parseFloat(m[0]):null; }
+
+/* transform文字列から translate(x,y) を解析 */
+function parseTranslate(tf){
+  if(!tf) return {x:0,y:0};
+  const m = String(tf).match(/translate\(\s*(-?[\d.]+)px\s*,\s*(-?[\d.]+)px\s*\)/);
+  if(m) return {x:parseFloat(m[1]), y:parseFloat(m[2])};
+  const m2 = String(tf).match(/translate\(\s*(-?[\d.]+)px\s*\)/);
+  if(m2) return {x:parseFloat(m2[1]), y:0};
+  return {x:0,y:0};
+}
+
+/* その他 transform 成分（rotate など）を保持したまま translate だけ差し替える */
+function buildTransform(ov){
+  let base = String(ov.transform||'');
+  // 既存の translate(...) を除去
+  base = base.replace(/translate\([^)]*\)/g,'').trim();
+  // 余分なスペースを掃除
+  base = base.replace(/\s+/g,' ');
+  const t = `translate(${state.tf.x}px, ${state.tf.y}px)`;
+  return (base ? base+' ' : '') + (state.tf.x||state.tf.y ? t : '').trim();
+}
+
+/* ========== 描画 ========== */
+function render(){
+  if(state.rooted){$rb.textContent='Root';$rb.classList.remove('no');}
+  else{$rb.textContent='未取得';$rb.classList.add('no');}
+
+  if(!state.rooted){
+    $tabs.innerHTML='';$chips.innerHTML='';
+    $scroll.innerHTML=`
+      <div class="np">
+        <div class="ic">🔒</div>
+        <h2>Root権限が必要です</h2>
+        <p>ステータスバー・時計・ホームバーなど、<br>
+           UIの全パーツをスライダーで調整できます。</p>
+        <button class="btn danger" id="btn-root" style="padding:12px 24px;font-size:13px;">
+          ⚡ ルート権限を取得する
+        </button>
+      </div>`;
+    document.getElementById('btn-root').onclick=()=>{
+      K.reqRoot(); toast('権限ダイアログを確認してください');
+    };
+    return;
+  }
+
+  // タブ
+  $tabs.innerHTML = Object.keys(GROUPS).map(g=>
+    `<button class="tab ${state.group===g?'sel':''}" data-g="${esc(g)}">${esc(g)}</button>`).join('');
+  $tabs.querySelectorAll('.tab').forEach(el=>{
+    el.onclick=()=>{ state.group=el.dataset.g; state.part=null; render(); };
+  });
+
+  // チップ
+  const list = GROUPS[state.group]||[];
+  if(!state.part || !list.find(p=>p[0]===state.part)) state.part=list[0][0];
+
+  $chips.innerHTML = list.map(([pid,lbl])=>{
+    const has = state.overrides[pid] && Object.keys(state.overrides[pid]).length>0;
+    const sel = state.part===pid;
+    return `<button class="chip ${sel?'sel':''} ${has?'has':''}" data-p="${esc(pid)}">${esc(lbl)}</button>`;
+  }).join('');
+  $chips.querySelectorAll('.chip').forEach(el=>{
+    el.onclick=()=>{ state.part=el.dataset.p; render(); };
+  });
+
+  renderEditor();
+}
+
+function renderEditor(){
+  const pid = state.part;
+  const ov = state.overrides[pid] || {};
+
+  // transform から translate を復元
+  state.tf = parseTranslate(ov.transform);
+
+  // セクションごとにまとめる
+  const bySec = {};
+  SLIDERS.forEach(s=>{(bySec[s.sec]=bySec[s.sec]||[]).push(s);});
+
+  let html='';
+
+  for(const [sec, list] of Object.entries(bySec)){
+    html += `<div class="sec"><div class="sec-title">${esc(sec)}</div>`;
+    for(const s of list){
+      const cur = getSliderValue(s, ov);
+      const has = hasSliderValue(s, ov);
+      html += `
+        <div class="row">
+          <span class="lbl">${esc(s.label)}</span>
+          <input type="range" data-sk="${esc(s.key)}"
+                 min="${s.min}" max="${s.max}" step="${s.step}" value="${cur}">
+          <span class="val" data-sk="${esc(s.key)}">${esc(formatVal(s,cur))}</span>
+          <button class="clr ${has?'':'hide'}" data-clr="${esc(s.key)}">✕</button>
+        </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // 色
+  const colVal = ov.color || '';
+  const bgVal  = ov['background-color'] || '';
+  html += `
+    <div class="sec"><div class="sec-title">色</div>
+
+      <div class="color-row">
+        <span class="lbl">文字色</span>
+        <input type="color" data-cp="color" value="${toHex(colVal)||'#ffffff'}">
+        <input type="text" class="color-hex" data-ch="color" value="${esc(colVal)}" placeholder="空=元の色">
+        <button class="clr ${colVal?'':'hide'}" data-clr="color">✕</button>
+      </div>
+      <div class="swatches">
+        ${['#ffffff','#000000','#ff3e3e','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#5856d6','#af52de','#ff2d55']
+          .map(c=>`<div class="sw" style="background:${c}" data-sw="color" data-c="${c}"></div>`).join('')}
+      </div>
+
+      <div class="color-row" style="margin-top:8px;">
+        <span class="lbl">背景</span>
+        <input type="color" data-cp="background-color" value="${toHex(bgVal)||'#1a1a1a'}">
+        <input type="text" class="color-hex" data-ch="background-color" value="${esc(bgVal)}" placeholder="空=元の背景">
+        <button class="clr ${bgVal?'':'hide'}" data-clr="background-color">✕</button>
+      </div>
+      <div class="swatches">
+        ${['transparent','#000000','#1a1a1a','#2c2c2c','#ffffff','#ff3e3e','#007aff','#34c759','#af52de']
+          .map(c=>`<div class="sw" style="background:${c==='transparent'
+            ?'linear-gradient(135deg,#ccc 0 50%,#fff 50% 100%)':c}" data-sw="background-color" data-c="${c}"></div>`).join('')}
+      </div>
+    </div>`;
+
+  // 一括操作
+  html += `
+    <div class="btn-row">
+      <button class="btn ghost" data-qa="export" style="flex:1">📤 書き出し</button>
+      <button class="btn ghost" data-qa="import" style="flex:1">📥 読み込み</button>
+    </div>
+    <div class="btn-row" style="padding-top:0">
+      <button class="btn danger" data-qa="reset-part" style="flex:1">🧹 このパーツを全解除</button>
+    </div>
+    <div class="btn-row" style="padding-top:0">
+      <button class="btn danger" data-qa="reset-all" style="flex:1">🧹 すべてのパーツを解除</button>
+    </div>`;
+
+  $scroll.innerHTML = html;
+  bindEditor();
+}
+
+/* ========== 値の取得・フォーマット ========== */
+function getSliderValue(s, ov){
+  if(s.isTransform){
+    return s.key==='translate.x' ? state.tf.x : state.tf.y;
+  }
+  if(s.isWeight){
+    const v = ov['font-weight'];
+    if(v==null) return s.def;
+    if(v==='bold') return 700;
+    if(v==='normal') return 400;
+    const n = numOf(v); return n || s.def;
+  }
+  const n = numOf(ov[s.prop]);
+  return n==null ? s.def : n;
+}
+
+function hasSliderValue(s, ov){
+  if(s.isTransform) return !!ov.transform;
+  if(s.isWeight) return ov['font-weight']!=null;
+  return ov[s.prop]!=null;
+}
+
+function formatVal(s, v){
+  if(s.isTransform) return (v>0?'+':'')+v+'px';
+  if(s.isWeight){
+    const map={100:'極細',200:'細',300:'やや細',400:'普通',500:'中',600:'やや太',700:'太',800:'極太',900:'最太'};
+    return map[v]||String(v);
+  }
+  if(s.unit==='px') return v+'px';
+  if(s.unit==='deg') return v+'°';
+  if(s.prop==='scale') return v.toFixed(2)+'×';
+  if(s.prop==='opacity') return Math.round(v*100)+'%';
+  return String(v);
+}
+
+/* ========== バインディング ========== */
+function bindEditor(){
+  const pid = state.part;
+
+  // スライダー
+  $scroll.querySelectorAll('input[type=range][data-sk]').forEach(inp=>{
+    const sk = inp.dataset.sk;
+    const s = SLIDERS.find(x=>x.key===sk);
+    if(!s) return;
+
+    inp.addEventListener('input', ()=>{
+      const v = parseFloat(inp.value);
+      const lbl = $scroll.querySelector(`.val[data-sk="${sk}"]`);
+      if(lbl) lbl.textContent = formatVal(s, v);
+      // 即送信（間引き無し）
+      commitSlider(pid, s, v);
+    });
+  });
+
+  // ✕ クリア
+  $scroll.querySelectorAll('.clr[data-clr]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const key = btn.dataset.clr;
+      if(key==='color' || key==='background-color'){
+        await K.set(pid, key, '');
+        if(state.overrides[pid]) delete state.overrides[pid][key];
+        render(); return;
+      }
+      const s = SLIDERS.find(x=>x.key===key);
+      if(!s) return;
+      if(s.isTransform){
+        // translate だけ消す
+        state.tf = {x:0,y:0};
+        const t = buildTransform(state.overrides[pid]||{});
+        if(t) await K.set(pid,'transform',t);
+        else { await K.set(pid,'transform',''); if(state.overrides[pid]) delete state.overrides[pid].transform; }
+      } else {
+        await K.set(pid, s.prop, '');
+        if(state.overrides[pid]) delete state.overrides[pid][s.prop];
+      }
+      render();
+    };
+  });
+
+  // 色ピッカー
+  $scroll.querySelectorAll('input[type=color][data-cp]').forEach(inp=>{
+    inp.addEventListener('input', async ()=>{
+      const prop = inp.dataset.cp;
+      const v = inp.value;
+      await K.set(pid, prop, v);
+      if(!state.overrides[pid]) state.overrides[pid]={};
+      state.overrides[pid][prop]=v;
+      const h = $scroll.querySelector(`input[data-ch="${prop}"]`);
+      if(h) h.value=v;
+      updateDot();
+    });
+  });
+
+  // HEX入力
+  $scroll.querySelectorAll('input[data-ch]').forEach(inp=>{
+    let t;
+    inp.addEventListener('input', ()=>{
+      clearTimeout(t);
+      t=setTimeout(async ()=>{
+        const prop = inp.dataset.ch;
+        const v = inp.value.trim();
+        await K.set(pid, prop, v);
+        if(!state.overrides[pid]) state.overrides[pid]={};
+        if(v) state.overrides[pid][prop]=v; else delete state.overrides[pid][prop];
+        if(v){ const hx = toHex(v); if(hx){ const ci=$scroll.querySelector(`input[data-cp="${prop}"]`); if(ci) ci.value=hx; } }
+        updateDot();
+      },300);
+    });
+  });
+
+  // プリセット色
+  $scroll.querySelectorAll('.sw[data-sw]').forEach(el=>{
+    el.onclick = async ()=>{
+      const prop = el.dataset.sw;
+      const v = el.dataset.c;
+      await K.set(pid, prop, v);
+      if(!state.overrides[pid]) state.overrides[pid]={};
+      state.overrides[pid][prop]=v;
+      const h = $scroll.querySelector(`input[data-ch="${prop}"]`);
+      if(h) h.value=v;
+      const cp = $scroll.querySelector(`input[data-cp="${prop}"]`);
+      if(cp && toHex(v)) cp.value=toHex(v);
+      updateDot();
+    };
+  });
+
+  // QA
+  $scroll.querySelectorAll('[data-qa]').forEach(b=>{
+    b.onclick = ()=> handleQA(b.dataset.qa);
+  });
+}
+
+async function commitSlider(pid, s, v){
+  if(s.isTransform){
+    const axis = s.key==='translate.x' ? 'x' : 'y';
+    state.tf[axis] = v;
+    const t = buildTransform(state.overrides[pid]||{});
+    if(!state.overrides[pid]) state.overrides[pid]={};
+    if(t){ state.overrides[pid].transform = t; await K.set(pid,'transform',t); }
+    else { delete state.overrides[pid].transform; await K.set(pid,'transform',''); }
+    updateDot();
+    return;
+  }
+  // クリア条件
+  let value = '';
+  if(s.isWeight){
+    if(v===400){ value=''; } else { value=String(v); }
+  } else if(s.clearAtZero && v===0){
+    value='';
+  } else if(s.clearAtDef && v===s.def){
+    value='';
+  } else if(s.prop==='opacity'){
+    value = v>=1 ? '' : String(v);
+  } else {
+    value = v + (s.unit||'');
+  }
+
+  if(!state.overrides[pid]) state.overrides[pid]={};
+  if(value){ state.overrides[pid][s.prop]=value; }
+  else { delete state.overrides[pid][s.prop]; }
+  await K.set(pid, s.prop, value);
+  updateDot();
+}
+
+function updateDot(){
+  const chip = $chips.querySelector(`.chip[data-p="${state.part}"]`);
+  if(!chip) return;
+  const ov = state.overrides[state.part]||{};
+  chip.classList.toggle('has', Object.keys(ov).length>0);
+}
+
+/* ========== 一括操作 ========== */
+async function handleQA(qa){
+  const pid = state.part;
+  if(qa==='reset-part'){
+    if(!confirm('このパーツの上書きを解除しますか？')) return;
+    await K.reset(pid);
+    delete state.overrides[pid];
+    state.tf={x:0,y:0};
+    toast('解除しました'); render(); return;
+  }
+  if(qa==='reset-all'){
+    if(!confirm('すべてのパーツの上書きを解除しますか？')) return;
+    await K.reset(null);
+    state.overrides={}; state.tf={x:0,y:0};
+    toast('全解除しました'); render(); return;
+  }
+  if(qa==='export'){
+    const json = JSON.stringify(state.overrides,null,2);
+    showExport(json); return;
+  }
+  if(qa==='import'){
+    const j = prompt('JSONを貼り付けてください:');
+    if(!j) return;
+    try{
+      const obj = JSON.parse(j);
+      if(typeof obj!=='object'||Array.isArray(obj)) throw new Error('オブジェクトではありません');
+      await K.reset(null);
+      for(const [p,props] of Object.entries(obj)){
+        for(const [k,v] of Object.entries(props)){
+          await K.set(p,k,v);
+        }
+      }
+      state.overrides = obj;
+      toast('読み込みました'); render();
+    }catch(e){ toast('JSONエラー: '+e.message); }
+  }
+}
+
+/* ========== 書き出し ========== */
+function showExport(json){
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9998;display:flex;flex-direction:column;padding:16px;box-sizing:border-box;';
+  ov.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;color:#fff;margin-bottom:10px;">
+      <span style="font-weight:bold;">📤 UI上書き設定</span>
+      <button style="padding:6px 14px;border-radius:20px;border:none;background:#ff3e3e;color:#fff;font-weight:bold;font-family:inherit;" id="exp-close">✕</button>
+    </div>
+    <textarea readonly style="flex:1;width:100%;padding:12px;background:#111;color:#0f0;border:none;border-radius:12px;font-family:monospace;font-size:12px;box-sizing:border-box;resize:none;">${esc(json)}</textarea>
+    <div style="color:#888;font-size:11px;margin-top:8px;text-align:center;">長押しで全選択 → コピー</div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#exp-close').onclick=()=>ov.remove();
+  const ta=ov.querySelector('textarea'); ta.onclick=()=>ta.select();
+}
+
+/* ========== hex ========== */
+function toHex(c){
+  if(!c) return null;
+  c=String(c).trim();
+  if(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c)){
+    if(c.length===4) c='#'+c[1]+c[1]+c[2]+c[2]+c[3]+c[3];
+    return c.toLowerCase();
+  }
+  const rgb=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+  if(rgb) return '#'+[+rgb[1],+rgb[2],+rgb[3]].map(n=>n.toString(16).padStart(2,'0')).join('');
+  return null;
+}
+
+/* ========== 起動 ========== */
+K.init();
+K._onRoot = async (rooted)=>{
+  state.rooted = rooted;
+  if(rooted){
+    const res = await K.getOverrides();
+    if(res && res.ok) state.overrides = res.overrides || {};
+  }
+  render();
+};
+
+// 起動直後：root状態待ち
+setTimeout(()=>{ if(!$scroll.innerHTML) render(); }, 800);
+setInterval(()=>{ K.send({action:'CHECK_ROOT_STATUS'}); }, 4000);
+
+})();
+</script>
+</body>
+</html>
